@@ -1,6 +1,7 @@
 import logging
 from typing import List, Dict, Any
 from fastapi import FastAPI, BackgroundTasks, status, HTTPException
+from fastapi.responses import HTMLResponse
 from .config import settings
 from .models import (
     AlertmanagerWebhook,
@@ -15,6 +16,7 @@ from .ai_engine import ai_engine
 from .remediator import remediation_engine
 from .policy_engine import policy_engine
 from .notifier import notifier
+from .dashboard import DASHBOARD_HTML
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s [%(levelname)s] %(name)s: %(message)s")
 logger = logging.getLogger("OmniSRE")
@@ -26,6 +28,11 @@ app = FastAPI(
 )
 
 incident_history: List[RCAReport] = []
+
+@app.get("/", response_class=HTMLResponse, tags=["Dashboard UI"])
+def serve_dashboard():
+    """Serves the interactive OmniSRE Web Dashboard."""
+    return DASHBOARD_HTML
 
 @app.get("/health", tags=["System"], status_code=status.HTTP_200_OK)
 def health_check():
