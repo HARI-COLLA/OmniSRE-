@@ -1,0 +1,18 @@
+apiVersion: v2
+name: omnisre
+description: Enterprise Autonomous AI-Powered Incident Response & Self-Healing SRE Agent for Kubernetes
+type: application
+version: 1.0.0
+appVersion: "1.0.0"
+keywords:
+  - sre
+  - aiops
+  - incident-response
+  - auto-remediation
+  - prometheus
+  - alertmanager
+  - kubernetes
+home: https://github.com/HARI-COLLA/omnisre-aiops-platform
+maintainers:
+  - name: Hari
+    email: mallangiharinathreddy727@gmail.com

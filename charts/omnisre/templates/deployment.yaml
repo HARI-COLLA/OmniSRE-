@@ -1,0 +1,61 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ .Release.Name }}-agent
+  namespace: {{ .Release.Namespace }}
+  labels:
+    app.kubernetes.io/name: omnisre
+    app.kubernetes.io/instance: {{ .Release.Name }}
+spec:
+  replicas: {{ .Values.replicaCount }}
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: omnisre
+      app.kubernetes.io/instance: {{ .Release.Name }}
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: omnisre
+        app.kubernetes.io/instance: {{ .Release.Name }}
+    spec:
+      serviceAccountName: {{ .Values.serviceAccount.name }}
+      containers:
+        - name: agent
+          image: "{{ .Values.image.repository }}:{{ .Values.image.tag }}"
+          imagePullPolicy: {{ .Values.image.pullPolicy }}
+          ports:
+            - containerPort: {{ .Values.service.port }}
+              name: http
+          env:
+            - name: APP_ENV
+              value: {{ .Values.config.appEnv | quote }}
+            - name: AI_PROVIDER
+              value: {{ .Values.config.aiProvider | quote }}
+            - name: GEMINI_API_KEY
+              value: {{ .Values.config.geminiApiKey | quote }}
+            - name: OPENAI_API_KEY
+              value: {{ .Values.config.openaiApiKey | quote }}
+            - name: K8S_IN_CLUSTER
+              value: {{ .Values.config.k8sInCluster | quote }}
+            - name: K8S_MOCK_MODE
+              value: {{ .Values.config.k8sMockMode | quote }}
+            - name: AUTO_REMEDIATION_ENABLED
+              value: {{ .Values.config.autoRemediationEnabled | quote }}
+            - name: PROMETHEUS_URL
+              value: {{ .Values.config.prometheusUrl | quote }}
+            - name: SLACK_WEBHOOK_URL
+              value: {{ .Values.config.slackWebhookUrl | quote }}
+          resources:
+            {{- toYaml .Values.resources | nindent 12 }}
+          livenessProbe:
+            httpGet:
+              path: /health
+              port: http
+            initialDelaySeconds: 15
+            periodSeconds: 20
+          readinessProbe:
+            httpGet:
+              path: /health
+              port: http
+            initialDelaySeconds: 5
+            periodSeconds: 10

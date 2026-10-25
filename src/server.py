@@ -1,6 +1,6 @@
 import logging
-from typing import List
-from fastapi import FastAPI, BackgroundTasks, status
+from typing import List, Dict, Any
+from fastapi import FastAPI, BackgroundTasks, status, HTTPException
 from .config import settings
 from .models import (
     AlertmanagerWebhook,
@@ -13,36 +13,37 @@ from .k8s_client import k8s_client
 from .prometheus_client import prom_client
 from .ai_engine import ai_engine
 from .remediator import remediation_engine
+from .policy_engine import policy_engine
 from .notifier import notifier
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s [%(levelname)s] %(name)s: %(message)s")
-logger = logging.getLogger("AIOpsServer")
+logger = logging.getLogger("OmniSRE")
 
 app = FastAPI(
-    title=settings.app_name,
+    title="OmniSRE: Autonomous AI Incident Response Platform",
     version=settings.version,
-    description="Autonomous AI-Powered Incident Response & Auto-Remediation Engine for Kubernetes SRE"
+    description="Enterprise-grade Autonomous AIOps SRE Agent for Kubernetes. Triages alerts, analyzes root causes with LLMs, and safely executes policy-governed self-healing."
 )
 
-# In-memory history of analyzed incidents
 incident_history: List[RCAReport] = []
 
-@app.get("/health", status_code=status.HTTP_200_OK)
+@app.get("/health", tags=["System"], status_code=status.HTTP_200_OK)
 def health_check():
-    """Liveness & readiness probe."""
+    """Liveness & readiness probe with system capabilities metadata."""
     return {
         "status": "healthy",
-        "app": settings.app_name,
+        "platform": "OmniSRE Enterprise AIOps Agent",
         "version": settings.version,
         "environment": settings.app_env,
         "ai_provider": settings.ai_provider,
         "auto_remediation_enabled": settings.auto_remediation_enabled,
+        "active_policies_count": len(policy_engine.policies),
         "k8s_mock_mode": settings.k8s_mock_mode
     }
 
 async def process_incident(alert: AlertItem, target_scenario: str = None) -> RCAReport:
-    """Core incident pipeline: Ingest -> Context Gather -> AI RCA -> Remediate -> Notify."""
-    namespace = alert.labels.get("namespace", "three-tier")
+    """Core incident pipeline: Ingest -> Context Gather -> AI RCA -> Policy Remediate -> Notify."""
+    namespace = alert.labels.get("namespace", "default")
     target_pod = (
         alert.labels.get("pod")
         or alert.labels.get("instance")
@@ -63,8 +64,9 @@ async def process_incident(alert: AlertItem, target_scenario: str = None) -> RCA
     # 2. AI Root Cause Analysis
     rca = await ai_engine.analyze_incident(incident_ctx)
 
-    # 3. Auto-Remediation Execution
-    executed, exec_result = remediation_engine.execute_remediation(rca)
+    # 3. Policy-Governed Auto-Remediation Execution
+    exit_code = pod_ctx.exit_code if pod_ctx else None
+    executed, exec_result = remediation_engine.execute_remediation(rca, exit_code=exit_code)
     rca.remediation_executed = executed
     rca.remediation_result = exec_result
 
@@ -75,10 +77,10 @@ async def process_incident(alert: AlertItem, target_scenario: str = None) -> RCA
     incident_history.insert(0, rca)
     return rca
 
-@app.post("/webhook", status_code=status.HTTP_202_ACCEPTED)
+@app.post("/webhook", tags=["Alert Ingestion"], status_code=status.HTTP_202_ACCEPTED)
 async def alertmanager_webhook(webhook: AlertmanagerWebhook, background_tasks: BackgroundTasks):
     """
-    Ingests Prometheus Alertmanager alerts and triggers autonomous AI investigation.
+    Ingests Prometheus Alertmanager, Datadog, or CloudWatch alerts and initiates automated investigation.
     """
     logger.info(f"Received Alertmanager webhook with {len(webhook.alerts)} alert(s).")
     for alert in webhook.alerts:
@@ -86,41 +88,41 @@ async def alertmanager_webhook(webhook: AlertmanagerWebhook, background_tasks: B
             background_tasks.add_task(process_incident, alert)
     return {"message": "Alertmanager webhook ingested successfully", "alerts_count": len(webhook.alerts)}
 
-@app.post("/simulate", response_model=RCAReport, status_code=status.HTTP_200_OK)
+@app.post("/simulate", tags=["Incident Simulation"], response_model=RCAReport, status_code=status.HTTP_200_OK)
 async def simulate_incident(req: SimulationRequest):
     """
     Simulates real-world production incident scenarios to demonstrate AI RCA & auto-healing.
-    Scenarios: 'mongodb_down', 'pod_oom_killed', 'crash_loop_backoff', 'high_memory_pressure'
+    Works for ANY namespace and service.
     """
-    logger.info(f"Triggering incident simulation for scenario: '{req.scenario}'...")
+    logger.info(f"Triggering incident simulation for scenario: '{req.scenario}' in namespace '{req.namespace}'...")
 
     scenario_map = {
         "mongodb_down": {
             "alertname": "MongoDbDown",
             "severity": "critical",
-            "pod": "mongodb-55d4c585b-x52r8",
-            "summary": "MongoDB instance is DOWN and unreachable",
+            "pod": "mongodb-service-0",
+            "summary": "Database instance is DOWN and unreachable",
             "description": "Readiness probe failed on TCP port 27017. Storage read-only detected."
         },
         "pod_oom_killed": {
             "alertname": "PodOOMKilled",
             "severity": "critical",
-            "pod": req.target_service or "api-7db95f877d-w2k4p",
-            "summary": "Pod container terminated with exit code 137 (OOMKilled)",
-            "description": "V8 memory cgroup limit 256Mi exceeded during heap allocation spike."
+            "pod": req.target_service or "core-api-worker-7d9f",
+            "summary": "Container terminated with exit code 137 (OOMKilled)",
+            "description": "Linux kernel cgroup memory limit exceeded during allocation spike."
         },
         "crash_loop_backoff": {
             "alertname": "PodCrashLooping",
             "severity": "critical",
-            "pod": req.target_service or "api-7db95f877d-k9lp2",
-            "summary": "Pod container restarting repeatedly in CrashLoopBackOff",
+            "pod": req.target_service or "web-service-6b4d",
+            "summary": "Container restarting repeatedly in CrashLoopBackOff",
             "description": "Container process exited with status 1 on initialization."
         },
         "high_memory_pressure": {
             "alertname": "NodeMemoryHighUtilization",
             "severity": "warning",
-            "pod": "api-deployment",
-            "summary": "High memory saturation (>85%) on backend pods",
+            "pod": "service-deployment",
+            "summary": "High memory saturation (>85%) on application pods",
             "description": "Traffic surge elevated memory usage to 94.1%."
         }
     }
@@ -145,7 +147,27 @@ async def simulate_incident(req: SimulationRequest):
     rca = await process_incident(alert, target_scenario=req.scenario)
     return rca
 
-@app.get("/incidents", response_model=List[RCAReport])
+@app.get("/incidents", tags=["Audit & History"], response_model=List[RCAReport])
 def list_incidents():
     """Lists history of all evaluated incidents and generated RCAs."""
     return incident_history
+
+@app.get("/policies", tags=["Policies"], response_model=List[Dict[str, Any]])
+def list_active_policies():
+    """Lists all active declarative remediation policies loaded in the platform."""
+    return [p.model_dump() for p in policy_engine.policies]
+
+@app.get("/pending-approvals", tags=["Human-in-the-Loop"], response_model=Dict[str, RCAReport])
+def list_pending_approvals():
+    """Lists all remediation actions awaiting human authorization."""
+    return remediation_engine.pending_approvals
+
+@app.post("/approval/{token}", tags=["Human-in-the-Loop"])
+def approve_pending_remediation(token: str):
+    """
+    Approves and triggers execution for a pending remediation from Slack or Web UI.
+    """
+    success, result = remediation_engine.approve_remediation(token)
+    if not success:
+        raise HTTPException(status_code=400, detail=result)
+    return {"status": "approved", "token": token, "result": result}

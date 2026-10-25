@@ -1,0 +1,79 @@
+version: "1.0"
+policies:
+  # 1. Automatic OOMKilled Pod Recovery
+  - name: "auto-recover-oom"
+    description: "Recovers pods killed by Linux OOM killer (exit code 137)"
+    match_alerts:
+      - "*OOM*"
+      - "*OutOfMemory*"
+      - "*MemoryLimitExceeded*"
+      - "PodOOMKilled"
+    match_exit_codes:
+      - 137
+    action: "RESTART_POD"
+    allowed_namespaces:
+      - "*"
+    excluded_namespaces:
+      - "kube-system"
+      - "kube-node-lease"
+      - "kube-public"
+    cooldown_seconds: 300
+    max_retries: 3
+    require_human_approval: false
+
+  # 2. Database Connection Exhaustion & Probe Recovery
+  - name: "database-unhealthy-recovery"
+    description: "Recreates stateful database pods experiencing socket hangs, lock corruption, or probe failures"
+    match_alerts:
+      - "*Mongo*Down*"
+      - "*Postgres*Down*"
+      - "*Redis*Down*"
+      - "*DatabaseUnhealthy*"
+      - "MongoDbDown"
+    action: "RESTART_POD"
+    allowed_namespaces:
+      - "*"
+    excluded_namespaces:
+      - "kube-system"
+    cooldown_seconds: 300
+    max_retries: 2
+    require_human_approval: false
+
+  # 3. Microservice Traffic Saturation Auto-Scaling
+  - name: "auto-scale-traffic-surge"
+    description: "Horizontally scales deployment replicas during traffic spikes and high CPU/RAM saturation"
+    match_alerts:
+      - "*HighTraffic*"
+      - "*LatencyP99*"
+      - "*NodeMemoryHighUtilization*"
+      - "*HighCPUUsage*"
+      - "NodeMemoryHighUtilization"
+    action: "SCALE_DEPLOYMENT"
+    scale_increment: 2
+    max_replicas: 10
+    allowed_namespaces:
+      - "*"
+    excluded_namespaces:
+      - "kube-system"
+    cooldown_seconds: 300
+    max_retries: 3
+    require_human_approval: false
+
+  # 4. CrashLoopBackOff Runtime Rollback Guard
+  - name: "rollback-faulty-release"
+    description: "Triggers rolling restart or rollback when pods crash loop due to missing entrypoint/dependencies"
+    match_alerts:
+      - "*CrashLoop*"
+      - "*PodCrashLooping*"
+      - "PodCrashLooping"
+    match_exit_codes:
+      - 1
+      - 127
+    action: "ROLLBACK_DEPLOYMENT"
+    allowed_namespaces:
+      - "*"
+    excluded_namespaces:
+      - "kube-system"
+    cooldown_seconds: 600
+    max_retries: 2
+    require_human_approval: false
