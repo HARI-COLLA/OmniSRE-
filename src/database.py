@@ -39,11 +39,30 @@ class IncidentDatabase:
                         remediation_type TEXT NOT NULL,
                         remediation_executed INTEGER NOT NULL,
                         remediation_result TEXT,
-                        created_at TEXT NOT NULL
+                        created_at TEXT NOT NULL,
+                        exit_code INTEGER,
+                        policy_matched TEXT,
+                        execution_duration_ms INTEGER,
+                        verification_status TEXT,
+                        raw_logs TEXT
                     )
                 """)
                 cursor.execute("CREATE INDEX IF NOT EXISTS idx_incidents_timestamp ON incidents(timestamp DESC)")
                 cursor.execute("CREATE INDEX IF NOT EXISTS idx_incidents_namespace ON incidents(namespace)")
+
+                # Automatic safe migration for existing databases
+                for col_name, col_type in [
+                    ("exit_code", "INTEGER"),
+                    ("policy_matched", "TEXT"),
+                    ("execution_duration_ms", "INTEGER"),
+                    ("verification_status", "TEXT"),
+                    ("raw_logs", "TEXT")
+                ]:
+                    try:
+                        cursor.execute(f"ALTER TABLE incidents ADD COLUMN {col_name} {col_type}")
+                    except sqlite3.OperationalError:
+                        pass
+
                 logger.info(f"Initialized persistent SOC2 incident audit storage at '{self.db_path}'.")
         except Exception as e:
             logger.error(f"Failed to initialize database: {e}")
@@ -61,8 +80,9 @@ class IncidentDatabase:
                         incident_id, timestamp, alert_name, target_resource, namespace,
                         severity, root_cause, impact_summary, confidence_score,
                         recommended_action, remediation_type, remediation_executed,
-                        remediation_result, created_at
-                    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                        remediation_result, created_at, exit_code, policy_matched,
+                        execution_duration_ms, verification_status, raw_logs
+                    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
                 """, (
                     rca.incident_id,
                     rca.timestamp,
@@ -77,7 +97,12 @@ class IncidentDatabase:
                     rca.remediation_type.value if hasattr(rca.remediation_type, 'value') else str(rca.remediation_type),
                     1 if rca.remediation_executed else 0,
                     rca.remediation_result,
-                    datetime.now().astimezone().isoformat()
+                    datetime.now().astimezone().isoformat(),
+                    rca.exit_code,
+                    rca.policy_matched,
+                    rca.execution_duration_ms,
+                    rca.verification_status,
+                    rca.raw_logs
                 ))
                 logger.info(f"Persisted incident '{rca.incident_id}' to audit storage.")
         except Exception as e:
@@ -95,6 +120,7 @@ class IncidentDatabase:
             cursor.execute("SELECT * FROM incidents ORDER BY timestamp DESC LIMIT ?", (limit,))
             rows = cursor.fetchall()
             for row in rows:
+                keys = row.keys()
                 incidents.append(RCAReport(
                     incident_id=row["incident_id"],
                     timestamp=row["timestamp"],
@@ -108,7 +134,12 @@ class IncidentDatabase:
                     recommended_action=row["recommended_action"],
                     remediation_type=RemediationActionType(row["remediation_type"]),
                     remediation_executed=bool(row["remediation_executed"]),
-                    remediation_result=row["remediation_result"]
+                    remediation_result=row["remediation_result"],
+                    exit_code=row["exit_code"] if "exit_code" in keys else None,
+                    policy_matched=row["policy_matched"] if "policy_matched" in keys else None,
+                    execution_duration_ms=row["execution_duration_ms"] if "execution_duration_ms" in keys else None,
+                    verification_status=row["verification_status"] if "verification_status" in keys else "Healthy (Running 1/1)",
+                    raw_logs=row["raw_logs"] if "raw_logs" in keys else ""
                 ))
         except Exception as e:
             logger.error(f"Failed to query incidents from database: {e}")

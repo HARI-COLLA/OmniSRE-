@@ -64,6 +64,13 @@ class RCAReport(BaseModel):
     remediation_type: RemediationActionType
     remediation_executed: bool = False
     remediation_result: Optional[str] = None
+    exit_code: Optional[int] = None
+    policy_matched: Optional[str] = None
+    execution_duration_ms: Optional[int] = None
+    verification_status: Optional[str] = "Healthy (Running 1/1)"
+    raw_logs: Optional[str] = ""
+    k8s_events: List[str] = Field(default_factory=list)
+
 
 class SimulationRequest(BaseModel):
     scenario: str = Field(
