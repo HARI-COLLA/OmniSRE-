@@ -185,7 +185,7 @@ DASHBOARD_HTML = """<!DOCTYPE html>
             transform: translateY(-1px);
         }
 
-        /* Multi-Cluster Cloud Selector Bar */
+        /* Multi-Cluster Selector Bar */
         .cluster-bar {
             display: flex;
             justify-content: space-between;
@@ -638,14 +638,14 @@ DASHBOARD_HTML = """<!DOCTYPE html>
             </div>
         </header>
 
-        <!-- Multi-Cloud Cluster Filter Bar -->
+        <!-- Multi-Cluster Filter Bar -->
         <div class="cluster-bar">
             <div class="cluster-tabs">
                 <span class="cluster-label">Target Cluster:</span>
-                <button class="cluster-tab active" onclick="switchCluster('all', this)">🌐 All Clouds</button>
-                <button class="cluster-tab" onclick="switchCluster('aws-eks-mumbai', this)">☁️ AWS EKS (ap-south-1)</button>
-                <button class="cluster-tab" onclick="switchCluster('azure-aks-prod', this)">🔷 Azure AKS (East US)</button>
-                <button class="cluster-tab" onclick="switchCluster('gcp-gke-analytics', this)">🟢 GCP GKE</button>
+                <button class="cluster-tab active" onclick="switchCluster('all', this)">🌐 All Clusters</button>
+                <button class="cluster-tab" onclick="switchCluster('prod-cluster-01', this)">🚀 prod-cluster-01</button>
+                <button class="cluster-tab" onclick="switchCluster('staging-cluster-01', this)">🧪 staging-cluster-01</button>
+                <button class="cluster-tab" onclick="switchCluster('edge-workload-01', this)">⚡ edge-workload-01</button>
             </div>
             <div class="cluster-live-tag">
                 <span>Leader Lock:</span> <span class="code-pill">omnisre-leader-active</span>
