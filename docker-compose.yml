@@ -1,0 +1,19 @@
+version: '3.8'
+
+services:
+  ai-incident-engine:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: ai-incident-engine
+    ports:
+      - "8000:8000"
+    environment:
+      - APP_ENV=production
+      - AI_PROVIDER=mock_heuristic  # Change to 'gemini' or 'openai' with keys
+      - GEMINI_API_KEY=${GEMINI_API_KEY:-}
+      - OPENAI_API_KEY=${OPENAI_API_KEY:-}
+      - AUTO_REMEDIATION_ENABLED=true
+      - K8S_MOCK_MODE=true
+      - SLACK_WEBHOOK_URL=${SLACK_WEBHOOK_URL:-}
+    restart: unless-stopped

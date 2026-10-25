@@ -1,0 +1,58 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: ai-incident-agent
+  namespace: monitoring
+  labels:
+    app: ai-incident-agent
+    tier: observability
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: ai-incident-agent
+  template:
+    metadata:
+      labels:
+        app: ai-incident-agent
+    spec:
+      serviceAccountName: ai-incident-agent-sa
+      containers:
+        - name: ai-incident-agent
+          image: ai-incident-agent:latest
+          imagePullPolicy: IfNotPresent
+          ports:
+            - containerPort: 8000
+              name: http
+          env:
+            - name: APP_ENV
+              value: "production"
+            - name: K8S_IN_CLUSTER
+              value: "true"
+            - name: K8S_MOCK_MODE
+              value: "false"
+            - name: AUTO_REMEDIATION_ENABLED
+              value: "true"
+            - name: AI_PROVIDER
+              value: "mock_heuristic"
+            - name: PROMETHEUS_URL
+              value: "http://prometheus-kube-prometheus-prometheus.monitoring.svc:9090"
+          resources:
+            requests:
+              cpu: "100m"
+              memory: "128Mi"
+            limits:
+              cpu: "500m"
+              memory: "512Mi"
+          livenessProbe:
+            httpGet:
+              path: /health
+              port: 8000
+            initialDelaySeconds: 10
+            periodSeconds: 15
+          readinessProbe:
+            httpGet:
+              path: /health
+              port: 8000
+            initialDelaySeconds: 5
+            periodSeconds: 10

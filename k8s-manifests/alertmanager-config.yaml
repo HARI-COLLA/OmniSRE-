@@ -1,0 +1,18 @@
+# Add this receiver to your Prometheus Alertmanager configuration:
+# It forwards all firing alerts directly to the AI Incident Agent webhook.
+
+global:
+  resolve_timeout: 5m
+
+route:
+  group_by: ['alertname', 'namespace', 'pod']
+  group_wait: 10s
+  group_interval: 1m
+  repeat_interval: 4h
+  receiver: 'ai-incident-webhook'
+
+receivers:
+- name: 'ai-incident-webhook'
+  webhook_configs:
+  - url: 'http://ai-incident-agent.monitoring.svc:8000/webhook'
+    send_resolved: false
