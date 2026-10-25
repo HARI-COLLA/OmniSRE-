@@ -747,7 +747,10 @@ DASHBOARD_HTML = """<!DOCTYPE html>
         <!-- Live Incident Post-Mortem Stream -->
         <div class="section-header">
             <div class="section-title">🚨 Real-Time SOC2 Audit & Incident Post-Mortem Stream</div>
-            <button class="nav-btn" onclick="fetchIncidents()" style="cursor: pointer;">🔄 Refresh Stream</button>
+            <div style="display: flex; gap: 8px;">
+                <button class="nav-btn" onclick="clearStream()" style="cursor: pointer; background: rgba(244, 63, 94, 0.1); border-color: rgba(244, 63, 94, 0.3); color: #FB7185;">🗑️ Clear Stream</button>
+                <button class="nav-btn" onclick="fetchIncidents()" style="cursor: pointer;">🔄 Refresh Stream</button>
+            </div>
         </div>
 
         <div id="incidents-container" class="incidents-stream">
@@ -776,6 +779,46 @@ DASHBOARD_HTML = """<!DOCTYPE html>
                 toast.style.transform = 'translateY(10px)';
                 setTimeout(() => toast.remove(), 300);
             }, 3500);
+        }
+
+        function formatIncidentTime(ts) {
+            if (!ts) return 'Just now';
+            try {
+                const date = new Date(ts);
+                if (isNaN(date.getTime())) return ts;
+                
+                const timeStr = date.toLocaleTimeString([], { 
+                    hour: '2-digit', 
+                    minute: '2-digit', 
+                    second: '2-digit',
+                    hour12: true 
+                });
+                
+                const diffMs = Date.now() - date.getTime();
+                const diffSec = Math.max(0, Math.floor(diffMs / 1000));
+                
+                let rel = 'Just now';
+                if (diffSec >= 60) {
+                    const mins = Math.floor(diffSec / 60);
+                    rel = `${mins}m ago`;
+                } else if (diffSec > 5) {
+                    rel = `${diffSec}s ago`;
+                }
+                
+                return `${timeStr} (${rel})`;
+            } catch (err) {
+                return ts;
+            }
+        }
+
+        async function clearStream() {
+            try {
+                await fetch('/incidents', { method: 'DELETE' });
+                showToast('Audit stream cleared successfully');
+                await fetchIncidents();
+            } catch (err) {
+                showToast('Error clearing stream: ' + err);
+            }
         }
 
         function switchCluster(cluster, el) {
@@ -808,7 +851,7 @@ DASHBOARD_HTML = """<!DOCTYPE html>
                     const isCritical = inc.severity === 'CRITICAL';
                     const sevClass = isCritical ? 'tag-critical' : 'tag-warning';
                     const confPct = Math.round(inc.confidence_score * 100);
-                    const formattedDate = inc.timestamp ? new Date(inc.timestamp).toLocaleTimeString() : 'Just now';
+                    const formattedDate = formatIncidentTime(inc.timestamp);
 
                     return `
                     <div class="incident-card ${idx === 0 ? 'new-arrival' : ''}">

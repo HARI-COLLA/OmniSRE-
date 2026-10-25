@@ -45,7 +45,7 @@ class TelemetryContext(BaseModel):
 
 class IncidentContext(BaseModel):
     incident_id: str = Field(default_factory=lambda: str(uuid.uuid4()))
-    timestamp: str = Field(default_factory=lambda: datetime.now(timezone.utc).isoformat())
+    timestamp: str = Field(default_factory=lambda: datetime.now().astimezone().isoformat())
     alert: AlertItem
     pod_context: Optional[PodContext] = None
     telemetry: Optional[TelemetryContext] = None

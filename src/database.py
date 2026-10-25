@@ -77,7 +77,7 @@ class IncidentDatabase:
                     rca.remediation_type.value if hasattr(rca.remediation_type, 'value') else str(rca.remediation_type),
                     1 if rca.remediation_executed else 0,
                     rca.remediation_result,
-                    datetime.now(timezone.utc).isoformat()
+                    datetime.now().astimezone().isoformat()
                 ))
                 logger.info(f"Persisted incident '{rca.incident_id}' to audit storage.")
         except Exception as e:
@@ -115,5 +115,18 @@ class IncidentDatabase:
         finally:
             conn.close()
         return incidents
+
+    def clear_all_incidents(self):
+        """Clears all audit logs from the database for fresh simulation cycles."""
+        conn = self._get_connection()
+        try:
+            with conn:
+                cursor = conn.cursor()
+                cursor.execute("DELETE FROM incidents")
+                logger.info("Cleared all incident records from audit storage.")
+        except Exception as e:
+            logger.error(f"Failed to clear incidents: {e}")
+        finally:
+            conn.close()
 
 incident_db = IncidentDatabase()

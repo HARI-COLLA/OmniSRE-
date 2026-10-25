@@ -53,7 +53,7 @@ class AIEngine:
 
         return RCAReport(
             incident_id=context.incident_id,
-            timestamp=datetime.now(timezone.utc).isoformat(),
+            timestamp=datetime.now().astimezone().isoformat(),
             alert_name=alert_name,
             target_resource=target_resource,
             namespace=namespace,

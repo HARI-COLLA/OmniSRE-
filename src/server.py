@@ -167,6 +167,12 @@ def list_incidents():
     """Lists history of all evaluated incidents loaded from persistent database storage."""
     return incident_db.get_recent_incidents(limit=100)
 
+@app.delete("/incidents", tags=["Audit & History"])
+def clear_all_incidents():
+    """Clears all audit logs for fresh testing and simulation."""
+    incident_db.clear_all_incidents()
+    return {"message": "All incident audit records cleared successfully."}
+
 @app.get("/policies", tags=["Policies"], response_model=List[Dict[str, Any]])
 def list_active_policies():
     """Lists all active declarative remediation policies loaded in the platform."""

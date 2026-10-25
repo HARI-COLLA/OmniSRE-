@@ -183,7 +183,7 @@ class KubernetesClient:
             return True
 
         try:
-            now = datetime.datetime.now(datetime.timezone.utc).isoformat()
+            now = datetime.datetime.now().astimezone().isoformat()
             body = {
                 'spec': {
                     'template': {
