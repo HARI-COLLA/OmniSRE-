@@ -1,0 +1,41 @@
+# Intentional OOMKilled Pod for Testing OmniSRE Auto-Healing on AWS EKS
+# This deployment requests 20Mi memory and tries to allocate 100Mi, triggering Linux SIGKILL (Exit Code 137).
+# OmniSRE will detect the OOMKilled event, correlate dead container logs, and execute automated recovery.
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: demo-oom-service
+  namespace: default
+  labels:
+    app: demo-oom-service
+    tier: test
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: demo-oom-service
+  template:
+    metadata:
+      labels:
+        app: demo-oom-service
+    spec:
+      containers:
+        - name: memory-hog
+          image: python:3.11-alpine
+          command:
+            - python
+            - -c
+            - |
+              import time
+              print("[CHAOS TEST] Allocating memory rapidly to induce OOMKilled (Exit Code 137)...", flush=True)
+              time.sleep(2)
+              # Allocate memory until Linux cgroup SIGKILL kills container
+              arr = []
+              while True:
+                  arr.append(" " * (10 * 1024 * 1024)) # 10MB per iteration
+                  time.sleep(0.2)
+          resources:
+            limits:
+              memory: "25Mi"
+            requests:
+              memory: "10Mi"

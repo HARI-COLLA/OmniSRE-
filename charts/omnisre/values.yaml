@@ -20,6 +20,19 @@ config:
   prometheusUrl: "http://prometheus-kube-prometheus-prometheus.monitoring.svc:9090"
   slackWebhookUrl: ""
   discordWebhookUrl: ""
+  databaseUrl: "sqlite:///app/data/omnisre.db"
+  apiAuthEnabled: false
+  adminApiKey: ""
+  haLeaderElection: false
+
+persistence:
+  enabled: false # Set true for persistent EBS/EFS storage on AWS EKS
+  size: 2Gi
+  storageClassName: ""
+
+policies:
+  createConfigMap: false
+  content: ""
 
 resources:
   limits:

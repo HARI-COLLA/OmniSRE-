@@ -1,0 +1,12 @@
+{{- if .Values.policies.createConfigMap -}}
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ include "omnisre.fullname" . }}-policies
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "omnisre.labels" . | nindent 4 }}
+data:
+  policies.yaml: |
+{{ .Values.policies.content | indent 4 }}
+{{- end }}

@@ -1,0 +1,47 @@
+# Intentional Unhealthy Database Pod for Testing OmniSRE Pod Re-creation on AWS EKS
+# Simulates a MongoDB or Redis container failing liveness probes due to deadlock/hang.
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: demo-mongodb-service
+  namespace: default
+  labels:
+    app: demo-mongodb-service
+    tier: database
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: demo-mongodb-service
+  template:
+    metadata:
+      labels:
+        app: demo-mongodb-service
+    spec:
+      containers:
+        - name: mock-db
+          image: busybox:latest
+          command:
+            - sh
+            - -c
+            - |
+              echo "[CHAOS TEST] Database service starting normally..."
+              touch /tmp/healthy
+              sleep 15
+              echo "[CHAOS TEST] Simulating connection deadlock / socket exhaustion..."
+              rm -f /tmp/healthy
+              sleep 3600
+          livenessProbe:
+            exec:
+              command:
+                - cat
+                - /tmp/healthy
+            initialDelaySeconds: 5
+            periodSeconds: 5
+          resources:
+            limits:
+              cpu: "100m"
+              memory: "64Mi"
+            requests:
+              cpu: "50m"
+              memory: "32Mi"

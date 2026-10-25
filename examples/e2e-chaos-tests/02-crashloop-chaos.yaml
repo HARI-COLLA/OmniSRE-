@@ -1,0 +1,37 @@
+# Intentional CrashLoopBackOff Pod for Testing OmniSRE Rollback & Restart on AWS EKS
+# This deployment fails on start with exit code 1 to simulate a bad release / missing dependency.
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: demo-crashloop-service
+  namespace: default
+  labels:
+    app: demo-crashloop-service
+    tier: test
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: demo-crashloop-service
+  template:
+    metadata:
+      labels:
+        app: demo-crashloop-service
+    spec:
+      containers:
+        - name: crash-app
+          image: alpine:latest
+          command:
+            - sh
+            - -c
+            - |
+              echo "[CHAOS TEST] Simulating fatal application startup error (Exit Code 1)..."
+              sleep 2
+              exit 1
+          resources:
+            limits:
+              cpu: "100m"
+              memory: "64Mi"
+            requests:
+              cpu: "50m"
+              memory: "32Mi"

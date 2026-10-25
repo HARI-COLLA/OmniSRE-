@@ -18,12 +18,17 @@ RUN groupadd -r sre && useradd -r -g sre -u 10001 sre
 
 COPY --from=builder /root/.local /home/sre/.local
 COPY src/ /app/src/
+COPY config/ /app/config/
+
+# Ensure data directory exists and is owned by non-root user sre
+RUN mkdir -p /app/data && chown -R sre:sre /app
 
 ENV PATH=/home/sre/.local/bin:$PATH \
     PYTHONUNBUFFERED=1 \
     PORT=8000
 
 USER sre
+
 
 EXPOSE 8000
 

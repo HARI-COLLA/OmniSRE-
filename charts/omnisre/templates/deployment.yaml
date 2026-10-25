@@ -1,22 +1,19 @@
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: {{ .Release.Name }}-agent
+  name: {{ include "omnisre.fullname" . }}
   namespace: {{ .Release.Namespace }}
   labels:
-    app.kubernetes.io/name: omnisre
-    app.kubernetes.io/instance: {{ .Release.Name }}
+    {{- include "omnisre.labels" . | nindent 4 }}
 spec:
   replicas: {{ .Values.replicaCount }}
   selector:
     matchLabels:
-      app.kubernetes.io/name: omnisre
-      app.kubernetes.io/instance: {{ .Release.Name }}
+      {{- include "omnisre.selectorLabels" . | nindent 6 }}
   template:
     metadata:
       labels:
-        app.kubernetes.io/name: omnisre
-        app.kubernetes.io/instance: {{ .Release.Name }}
+        {{- include "omnisre.selectorLabels" . | nindent 8 }}
     spec:
       serviceAccountName: {{ .Values.serviceAccount.name }}
       containers:
@@ -45,6 +42,27 @@ spec:
               value: {{ .Values.config.prometheusUrl | quote }}
             - name: SLACK_WEBHOOK_URL
               value: {{ .Values.config.slackWebhookUrl | quote }}
+            - name: DISCORD_WEBHOOK_URL
+              value: {{ .Values.config.discordWebhookUrl | quote }}
+            - name: DATABASE_URL
+              value: {{ .Values.config.databaseUrl | quote }}
+            - name: API_AUTH_ENABLED
+              value: {{ .Values.config.apiAuthEnabled | quote }}
+            - name: ADMIN_API_KEY
+              value: {{ .Values.config.adminApiKey | quote }}
+            - name: HA_LEADER_ELECTION
+              value: {{ .Values.config.haLeaderElection | quote }}
+            - name: POD_NAME
+              valueFrom:
+                fieldRef:
+                  fieldPath: metadata.name
+          volumeMounts:
+            - name: data-volume
+              mountPath: /app/data
+            {{- if .Values.policies.createConfigMap }}
+            - name: policies-volume
+              mountPath: /app/config
+            {{- end }}
           resources:
             {{- toYaml .Values.resources | nindent 12 }}
           livenessProbe:
@@ -59,3 +77,16 @@ spec:
               port: http
             initialDelaySeconds: 5
             periodSeconds: 10
+      volumes:
+        - name: data-volume
+        {{- if .Values.persistence.enabled }}
+          persistentVolumeClaim:
+            claimName: {{ include "omnisre.fullname" . }}-pvc
+        {{- else }}
+          emptyDir: {}
+        {{- end }}
+        {{- if .Values.policies.createConfigMap }}
+        - name: policies-volume
+          configMap:
+            name: {{ include "omnisre.fullname" . }}-policies
+        {{- end }}
