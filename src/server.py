@@ -1,6 +1,6 @@
 import logging
 from typing import List, Dict, Any
-from fastapi import FastAPI, BackgroundTasks, status, HTTPException
+from fastapi import FastAPI, BackgroundTasks, status, HTTPException, Depends
 from fastapi.responses import HTMLResponse
 from .config import settings
 from .models import (
@@ -16,6 +16,9 @@ from .ai_engine import ai_engine
 from .remediator import remediation_engine
 from .policy_engine import policy_engine
 from .notifier import notifier
+from .database import incident_db
+from .auth import verify_api_key, API_KEY_ENABLED
+from .ha_leader import ha_manager
 from .dashboard import DASHBOARD_HTML
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s [%(levelname)s] %(name)s: %(message)s")
@@ -27,8 +30,6 @@ app = FastAPI(
     description="Enterprise-grade Autonomous AIOps SRE Agent for Kubernetes. Triages alerts, analyzes root causes with LLMs, and safely executes policy-governed self-healing."
 )
 
-incident_history: List[RCAReport] = []
-
 @app.get("/", response_class=HTMLResponse, tags=["Dashboard UI"])
 def serve_dashboard():
     """Serves the interactive OmniSRE Web Dashboard."""
@@ -36,7 +37,7 @@ def serve_dashboard():
 
 @app.get("/health", tags=["System"], status_code=status.HTTP_200_OK)
 def health_check():
-    """Liveness & readiness probe with system capabilities metadata."""
+    """Liveness & readiness probe with enterprise capabilities metadata."""
     return {
         "status": "healthy",
         "platform": "OmniSRE Enterprise AIOps Agent",
@@ -45,11 +46,14 @@ def health_check():
         "ai_provider": settings.ai_provider,
         "auto_remediation_enabled": settings.auto_remediation_enabled,
         "active_policies_count": len(policy_engine.policies),
-        "k8s_mock_mode": settings.k8s_mock_mode
+        "k8s_mock_mode": settings.k8s_mock_mode,
+        "database_storage": "persistent_sqlite_soc2",
+        "ha_leader_active": ha_manager.can_execute_mutation(),
+        "api_key_security_enabled": API_KEY_ENABLED
     }
 
 async def process_incident(alert: AlertItem, target_scenario: str = None) -> RCAReport:
-    """Core incident pipeline: Ingest -> Context Gather -> AI RCA -> Policy Remediate -> Notify."""
+    """Core incident pipeline: Ingest -> Context Gather -> AI RCA -> Policy Remediate -> Persist -> Notify."""
     namespace = alert.labels.get("namespace", "default")
     target_pod = (
         alert.labels.get("pod")
@@ -71,17 +75,21 @@ async def process_incident(alert: AlertItem, target_scenario: str = None) -> RCA
     # 2. AI Root Cause Analysis
     rca = await ai_engine.analyze_incident(incident_ctx)
 
-    # 3. Policy-Governed Auto-Remediation Execution
-    exit_code = pod_ctx.exit_code if pod_ctx else None
-    executed, exec_result = remediation_engine.execute_remediation(rca, exit_code=exit_code)
-    rca.remediation_executed = executed
-    rca.remediation_result = exec_result
+    # 3. Policy-Governed Auto-Remediation Execution (Guarded by HA Leader Election)
+    if ha_manager.can_execute_mutation():
+        exit_code = pod_ctx.exit_code if pod_ctx else None
+        executed, exec_result = remediation_engine.execute_remediation(rca, exit_code=exit_code)
+        rca.remediation_executed = executed
+        rca.remediation_result = exec_result
+    else:
+        rca.remediation_executed = False
+        rca.remediation_result = "[HA Standby] Passive replica skipped execution to prevent race conditions."
 
     # 4. Dispatch Notifications
     await notifier.dispatch_incident_report(rca)
 
-    # 5. Save History
-    incident_history.insert(0, rca)
+    # 5. Save to Persistent Database (SOC2 Audit Trail)
+    incident_db.save_incident(rca)
     return rca
 
 @app.post("/webhook", tags=["Alert Ingestion"], status_code=status.HTTP_202_ACCEPTED)
@@ -95,7 +103,7 @@ async def alertmanager_webhook(webhook: AlertmanagerWebhook, background_tasks: B
             background_tasks.add_task(process_incident, alert)
     return {"message": "Alertmanager webhook ingested successfully", "alerts_count": len(webhook.alerts)}
 
-@app.post("/simulate", tags=["Incident Simulation"], response_model=RCAReport, status_code=status.HTTP_200_OK)
+@app.post("/simulate", tags=["Incident Simulation"], response_model=RCAReport, status_code=status.HTTP_200_OK, dependencies=[Depends(verify_api_key)])
 async def simulate_incident(req: SimulationRequest):
     """
     Simulates real-world production incident scenarios to demonstrate AI RCA & auto-healing.
@@ -156,8 +164,8 @@ async def simulate_incident(req: SimulationRequest):
 
 @app.get("/incidents", tags=["Audit & History"], response_model=List[RCAReport])
 def list_incidents():
-    """Lists history of all evaluated incidents and generated RCAs."""
-    return incident_history
+    """Lists history of all evaluated incidents loaded from persistent database storage."""
+    return incident_db.get_recent_incidents(limit=100)
 
 @app.get("/policies", tags=["Policies"], response_model=List[Dict[str, Any]])
 def list_active_policies():
@@ -169,7 +177,7 @@ def list_pending_approvals():
     """Lists all remediation actions awaiting human authorization."""
     return remediation_engine.pending_approvals
 
-@app.post("/approval/{token}", tags=["Human-in-the-Loop"])
+@app.post("/approval/{token}", tags=["Human-in-the-Loop"], dependencies=[Depends(verify_api_key)])
 def approve_pending_remediation(token: str):
     """
     Approves and triggers execution for a pending remediation from Slack or Web UI.
