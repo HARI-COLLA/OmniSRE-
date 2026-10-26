@@ -1,7 +1,7 @@
 import time
 import logging
 from typing import List, Dict, Any
-from fastapi import FastAPI, BackgroundTasks, status, HTTPException, Depends
+from fastapi import FastAPI, BackgroundTasks, status, HTTPException, Depends, WebSocket, WebSocketDisconnect
 from fastapi.responses import HTMLResponse
 from .config import settings
 from .models import (
@@ -24,6 +24,27 @@ from .dashboard import DASHBOARD_HTML
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s [%(levelname)s] %(name)s: %(message)s")
 logger = logging.getLogger("OmniSRE")
+
+class ConnectionManager:
+    def __init__(self):
+        self.active_connections: List[WebSocket] = []
+
+    async def connect(self, websocket: WebSocket):
+        await websocket.accept()
+        self.active_connections.append(websocket)
+
+    def disconnect(self, websocket: WebSocket):
+        if websocket in self.active_connections:
+            self.active_connections.remove(websocket)
+
+    async def broadcast(self, message: dict):
+        for connection in list(self.active_connections):
+            try:
+                await connection.send_json(message)
+            except Exception:
+                self.disconnect(connection)
+
+ws_manager = ConnectionManager()
 
 app = FastAPI(
     title="OmniSRE: Autonomous AI Incident Response Platform",
@@ -112,6 +133,16 @@ async def process_incident(alert: AlertItem, target_scenario: str = None) -> RCA
 
     # 5. Save to Persistent Database (SOC2 Audit Trail)
     incident_db.save_incident(rca)
+
+    # 6. Real-time WebSocket push (0ms latency to connected dashboards)
+    try:
+        await ws_manager.broadcast({
+            "type": "INCIDENT_RESOLVED",
+            "data": rca.model_dump()
+        })
+    except Exception as e:
+        logger.debug(f"WS broadcast error: {e}")
+
     return rca
 
 @app.get("/cluster/overview", tags=["System"])
@@ -195,10 +226,21 @@ def list_incidents():
     return incident_db.get_recent_incidents(limit=100)
 
 @app.delete("/incidents", tags=["Audit & History"])
-def clear_all_incidents():
+async def clear_all_incidents():
     """Clears all audit logs for fresh testing and simulation."""
     incident_db.clear_all_incidents()
+    await ws_manager.broadcast({"type": "INCIDENTS_CLEARED"})
     return {"message": "All incident audit records cleared successfully."}
+
+@app.websocket("/ws/events")
+async def websocket_events(websocket: WebSocket):
+    """Real-time bi-directional WebSocket stream for live incident updates and telemetry."""
+    await ws_manager.connect(websocket)
+    try:
+        while True:
+            await websocket.receive_text()
+    except (WebSocketDisconnect, Exception):
+        ws_manager.disconnect(websocket)
 
 @app.get("/policies", tags=["Policies"], response_model=List[Dict[str, Any]])
 def list_active_policies():

@@ -995,8 +995,8 @@ DASHBOARD_HTML = """<!DOCTYPE html>
                     <span id="nav-cluster-name">Cluster: omnisre-prod-eks</span>
                 </div>
                 <div class="status-pill">
-                    <span class="pulse-dot"></span>
-                    <span>Autonomous SRE Active</span>
+                    <span class="pulse-dot" id="ws-dot"></span>
+                    <span id="ws-status">Real-Time WebSocket (0ms)</span>
                 </div>
                 <a href="/docs" target="_blank" class="nav-btn">Swagger API ↗</a>
             </div>
@@ -1235,6 +1235,46 @@ Verification: Kubelet restarted replacement replica within SLO deadline.
     <script>
         let currentFilter = 'omnisre-prod-eks';
         let cachedIncidents = [];
+        let wsSocket = null;
+
+        function connectWebSocket() {
+            try {
+                const proto = location.protocol === 'https:' ? 'wss:' : 'ws:';
+                const wsUrl = `${proto}//${location.host}/ws/events`;
+                wsSocket = new WebSocket(wsUrl);
+
+                wsSocket.onopen = () => {
+                    const st = document.getElementById('ws-status');
+                    if (st) st.innerText = 'Real-Time WebSocket (0ms)';
+                    const dot = document.getElementById('ws-dot');
+                    if (dot) dot.style.background = '#10B981';
+                };
+
+                wsSocket.onmessage = (event) => {
+                    try {
+                        const msg = JSON.parse(event.data);
+                        if (msg.type === 'INCIDENT_RESOLVED') {
+                            showToast(`⚡ Live event: ${msg.data.alert_name} self-healed in ${msg.data.execution_duration_ms}ms`);
+                            fetchIncidents();
+                            fetchClusterOverview();
+                        } else if (msg.type === 'INCIDENTS_CLEARED') {
+                            fetchIncidents();
+                            fetchClusterOverview();
+                        }
+                    } catch (e) {}
+                };
+
+                wsSocket.onclose = () => {
+                    const st = document.getElementById('ws-status');
+                    if (st) st.innerText = 'Auto-Polling (3.5s)';
+                    const dot = document.getElementById('ws-dot');
+                    if (dot) dot.style.background = '#F59E0B';
+                    setTimeout(connectWebSocket, 4000);
+                };
+            } catch (err) {
+                console.error("WebSocket connection error:", err);
+            }
+        }
 
         function showToast(msg) {
             const box = document.getElementById('toast-box');
@@ -1405,7 +1445,14 @@ Audit Standard: SOC2 CC7.3 / ISO 27001 Automated Recovery Logged.`;
                 const res = await fetch('/incidents');
                 cachedIncidents = await res.json();
                 
-                document.getElementById('incident-counter-badge').innerText = `${cachedIncidents.length} Incident(s)`;
+                const displayed = cachedIncidents.filter(inc => {
+                    if (!currentFilter || currentFilter === 'all' || currentFilter === 'omnisre-prod-eks') {
+                        return (inc.cluster_name || 'omnisre-prod-eks') === 'omnisre-prod-eks';
+                    }
+                    return (inc.cluster_name || '') === currentFilter;
+                });
+
+                document.getElementById('incident-counter-badge').innerText = `${displayed.length} Incident(s)`;
                 const container = document.getElementById('incidents-container');
                 const heroBanner = document.getElementById('hero-banner');
                 const heroIcon = document.getElementById('hero-icon');
@@ -1414,11 +1461,11 @@ Audit Standard: SOC2 CC7.3 / ISO 27001 Automated Recovery Logged.`;
                 const heroPill = document.getElementById('hero-status-pill');
 
                 // Dynamic Hero State: Healthy vs Active Incident
-                if (cachedIncidents.length === 0) {
+                if (displayed.length === 0) {
                     heroBanner.classList.remove('alert-state');
                     heroIcon.innerHTML = '🛡️';
                     heroTitle.innerText = 'CLUSTER HEALTH: 100% OPERATIONAL';
-                    heroSub.innerHTML = 'Connected to AWS EKS cluster <strong>omnisre-prod-eks</strong>. 0 active firing alerts. All nodes and workloads healthy.';
+                    heroSub.innerHTML = `Connected to AWS EKS cluster <strong>${currentFilter}</strong>. 0 active firing alerts. All nodes and workloads healthy.`;
                     heroPill.className = 'hero-badge badge-green';
                     heroPill.innerText = '● 0 FIRING ALERTS';
 
@@ -1426,7 +1473,7 @@ Audit Standard: SOC2 CC7.3 / ISO 27001 Automated Recovery Logged.`;
                     <div class="empty-card">
                         <div class="empty-icon">🛡️</div>
                         <h3 style="font-size: 15px; color: var(--text-title); margin-bottom: 6px;">Cluster Workloads Healthy & Monitored</h3>
-                        <p style="font-size: 13px;">No active firing incidents on cluster <strong>omnisre-prod-eks</strong>. The autonomous AIOps agent is actively monitoring Prometheus and Kubernetes telemetry.</p>
+                        <p style="font-size: 13px;">No active firing incidents on cluster <strong>${currentFilter}</strong>. The autonomous AIOps agent is actively monitoring Prometheus and Kubernetes telemetry.</p>
                     </div>`;
                     return;
                 }
@@ -1435,11 +1482,11 @@ Audit Standard: SOC2 CC7.3 / ISO 27001 Automated Recovery Logged.`;
                 heroBanner.classList.add('alert-state');
                 heroIcon.innerHTML = '🚨';
                 heroTitle.innerText = 'INCIDENT STREAM: TRIAGED & REMEDIATED';
-                heroSub.innerHTML = `Autonomous AIOps agent has triaged and self-healed <strong>${cachedIncidents.length} incident(s)</strong> on cluster <strong>omnisre-prod-eks</strong>.`;
+                heroSub.innerHTML = `Autonomous AIOps agent has triaged and self-healed <strong>${displayed.length} incident(s)</strong> on cluster <strong>${currentFilter}</strong>.`;
                 heroPill.className = 'hero-badge badge-red';
-                heroPill.innerText = `● ${cachedIncidents.length} TRIAGED INCIDENTS`;
+                heroPill.innerText = `● ${displayed.length} TRIAGED INCIDENTS`;
 
-                container.innerHTML = cachedIncidents.map((inc, idx) => {
+                container.innerHTML = displayed.map((inc, idx) => {
                     const isCritical = inc.severity === 'CRITICAL';
                     const sevClass = isCritical ? 'tag-critical' : 'tag-warning';
                     const confPct = Math.round(inc.confidence_score * 100);
@@ -1562,7 +1609,8 @@ Audit Standard: SOC2 CC7.3 / ISO 27001 Automated Recovery Logged.`;
             }
         }
 
-        // Initial fetch and auto-refresh
+        // Initial fetch, real-time WebSocket, and auto-refresh fallback
+        connectWebSocket();
         fetchClusterOverview();
         fetchIncidents();
         setInterval(fetchIncidents, 3500);
