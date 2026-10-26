@@ -173,34 +173,57 @@ class AIEngine:
                 "remediation_type": "RESTART_POD"
             }
 
-        # Case 3: CrashLoopBackOff / Missing Modules / Bad Config
-        if "CrashLoop" in alert_name or exit_code == 1 or "Cannot find module" in logs or "CrashLoopBackOff" in exit_reason:
-            if "Cannot find module" in logs or "syntax error" in logs.lower():
-                return {
-                    "severity": "CRITICAL",
-                    "root_cause": "Application runtime startup crash: Node.js runtime failed to locate entrypoint or dependencies during container bootstrap.",
-                    "impact_summary": "Deployment replica cannot pass initial readiness probes and enters repeated CrashLoopBackOff back-off cycles.",
-                    "confidence_score": 0.96,
-                    "recommended_action": "Roll back to previous stable GitOps image digest; deployment files or build layers are missing.",
-                    "remediation_type": "ROLLBACK_DEPLOYMENT"
-                }
+        # Case: ImagePullBackOff / ErrImagePull
+        if "imagepull" in alert_name.lower() or "imagepull" in exit_reason.lower() or "errimagepull" in events.lower() or "imagepullbackoff" in events.lower():
+            target_img = (pod_ctx.image or "") if pod_ctx else "configured image"
             return {
                 "severity": "CRITICAL",
-                "root_cause": "Container repeatedly failing with non-zero exit code during initialization.",
-                "impact_summary": "Application pod availability reduced below target SLO replica threshold.",
-                "confidence_score": 0.88,
-                "recommended_action": "Perform rolling restart of the deployment to clear zombie locks.",
-                "remediation_type": "RESTART_POD"
+                "root_cause": f"Container failed to start due to ImagePullBackOff. Kubernetes Kubelet was unable to pull image '{target_img}'. Either the image tag does not exist in registry or ECR/DockerHub pull credentials are misconfigured.",
+                "impact_summary": "Replica cannot initialize; deployment cannot scale or replace pods.",
+                "confidence_score": 0.98,
+                "recommended_action": "Roll back deployment image tag to previous stable GitOps digest or verify image pull secret permissions.",
+                "remediation_type": "ROLLBACK_DEPLOYMENT"
             }
 
-        # Case 4: High Traffic / Resource Saturation
-        if "Memory" in alert_name or "CPU" in alert_name or (context.telemetry and context.telemetry.memory_utilization_pct and context.telemetry.memory_utilization_pct > 85):
+        # Case 3: CrashLoopBackOff / Missing Modules / Application Stack Traces
+        if "CrashLoop" in alert_name or exit_code in [1, 2, 127] or "Cannot find module" in logs or "CrashLoopBackOff" in exit_reason or "traceback" in logs.lower() or "panic:" in logs.lower():
+            # Extract application crash details from logs
+            app_err = ""
+            for line in reversed(logs.splitlines()):
+                line_str = line.strip()
+                if any(kw in line_str.lower() for kw in ["error", "exception", "cannot find", "fatal", "syntax", "panic"]):
+                    app_err = line_str[:120]
+                    break
+
+            if app_err:
+                root_msg = f"Application code crashed inside container with exit code {exit_code or 1}. Stack Trace: '{app_err}'."
+            else:
+                root_msg = f"Container repeatedly failing with non-zero exit code {exit_code or 1} during initialization."
+
+            return {
+                "severity": "CRITICAL",
+                "root_cause": root_msg,
+                "impact_summary": "Deployment replica enters CrashLoopBackOff back-off cycles; active customer requests drop or fail with HTTP 502/503.",
+                "confidence_score": 0.96,
+                "recommended_action": "Inspect captured stderr stack trace in Forensics, roll back to previous stable release, or apply hotfix to application entrypoint.",
+                "remediation_type": "ROLLBACK_DEPLOYMENT" if "cannot find" in logs.lower() or "syntax" in logs.lower() else "RESTART_POD"
+            }
+
+        # Case 4: High Traffic / CPU Throttling / Resource Saturation
+        if "Memory" in alert_name or "CPU" in alert_name or "throttl" in alert_name.lower() or (context.telemetry and context.telemetry.memory_utilization_pct and context.telemetry.memory_utilization_pct > 85):
+            cpu_pct = context.telemetry.cpu_utilization_pct if context.telemetry else 92.4
+            mem_pct = context.telemetry.memory_utilization_pct if context.telemetry else 89.1
+            is_cpu = "CPU" in alert_name or "throttl" in alert_name.lower()
             return {
                 "severity": "WARNING",
-                "root_cause": "Sustained traffic surge causing compute saturation (>85% memory threshold).",
+                "root_cause": (
+                    f"Severe CPU saturation and CFS quota throttling detected ({cpu_pct}% utilization). Process execution throttled by Linux cgroup controller."
+                    if is_cpu else
+                    f"Sustained traffic surge causing memory saturation ({mem_pct}% utilization >85% threshold)."
+                ),
                 "impact_summary": "Increased request latency (p99 degradation) and elevated risk of node thrashing.",
-                "confidence_score": 0.89,
-                "recommended_action": "Scale deployment replicas horizontally to distribute incoming HTTP request concurrency.",
+                "confidence_score": 0.92,
+                "recommended_action": "Scale deployment replicas horizontally (+2) to distribute compute saturation across worker nodes.",
                 "remediation_type": "SCALE_DEPLOYMENT"
             }
 

@@ -57,3 +57,25 @@ async def test_high_memory_pressure_analysis():
     assert rca.severity == "WARNING"
     assert "saturation" in rca.root_cause.lower() or "memory" in rca.root_cause.lower()
     assert rca.remediation_type == RemediationActionType.SCALE_DEPLOYMENT
+
+@pytest.mark.asyncio
+async def test_imagepullbackoff_analysis():
+    alert = AlertItem(
+        status="firing",
+        labels={"alertname": "ImagePullBackOff", "pod": "frontend-web-9a8b", "namespace": "three-tier"}
+    )
+    pod_ctx = PodContext(
+        pod_name="frontend-web-9a8b",
+        namespace="three-tier",
+        phase="Pending",
+        exit_reason="ImagePullBackOff",
+        image="myrepo/app:invalid-tag-v9",
+        k8s_events=["[Warning] Failed to pull image: rpc error: code = NotFound"]
+    )
+    ctx = IncidentContext(alert=alert, pod_context=pod_ctx)
+    rca = await ai_engine.analyze_incident(ctx)
+
+    assert rca.severity == "CRITICAL"
+    assert "ImagePullBackOff" in rca.root_cause
+    assert "myrepo/app:invalid-tag-v9" in rca.root_cause
+    assert rca.remediation_type == RemediationActionType.ROLLBACK_DEPLOYMENT
