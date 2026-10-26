@@ -996,6 +996,9 @@ DASHBOARD_HTML = """<!DOCTYPE html>
             from { transform: translateX(50px); opacity: 0; }
             to { transform: translateX(0); opacity: 1; }
         }
+
+        @keyframes spin { 100% { transform: rotate(360deg); } }
+        .rotating { animation: spin 0.6s cubic-bezier(0.4, 0, 0.2, 1); }
     </style>
 </head>
 <body>
@@ -1015,6 +1018,10 @@ DASHBOARD_HTML = """<!DOCTYPE html>
                 <div class="cluster-live-badge">
                     <span class="badge-dot"></span>
                     <span id="nav-cluster-name">Cluster: omnisre-prod-eks</span>
+                </div>
+                <div class="status-pill">
+                    <span class="pulse-dot" style="background: #38BDF8;"></span>
+                    <span id="live-cluster-clock" style="font-family: var(--font-mono); font-weight: 600;">--:--:--</span>
                 </div>
                 <div class="status-pill">
                     <span class="pulse-dot" id="ws-dot"></span>
@@ -1137,9 +1144,10 @@ DASHBOARD_HTML = """<!DOCTYPE html>
                 <span>🚨 Incident Post-Mortem & Autonomous Remediation Stream</span>
                 <span class="code-pill" id="incident-counter-badge">0 Incidents</span>
             </div>
-            <div style="display: flex; gap: 8px;">
+            <div style="display: flex; gap: 10px; align-items: center;">
+                <span style="font-size: 11px; color: var(--text-muted); font-family: var(--font-mono);" id="last-sync-time">⚡ Live Sync: Active (1s ticker)</span>
                 <button class="nav-btn" onclick="clearStream()" style="cursor: pointer; background: rgba(244, 63, 94, 0.1); border-color: rgba(244, 63, 94, 0.3); color: #FB7185;">🗑️ Clear Stream</button>
-                <button class="nav-btn" onclick="fetchIncidents()" style="cursor: pointer;">🔄 Refresh Stream</button>
+                <button class="nav-btn" id="btn-refresh" onclick="handleManualRefresh()" style="cursor: pointer;">🔄 Refresh Stream</button>
             </div>
         </div>
 
@@ -1328,11 +1336,17 @@ Verification: Kubelet restarted replacement replica within SLO deadline.
                 const diffSec = Math.max(0, Math.floor(diffMs / 1000));
                 
                 let rel = 'Just now';
-                if (diffSec >= 60) {
-                    const mins = Math.floor(diffSec / 60);
-                    rel = `${mins}m ago`;
-                } else if (diffSec > 5) {
+                if (diffSec < 60) {
                     rel = `${diffSec}s ago`;
+                } else if (diffSec < 3600) {
+                    const mins = Math.floor(diffSec / 60);
+                    const secs = diffSec % 60;
+                    rel = `${mins}m ${String(secs).padStart(2, '0')}s ago`;
+                } else {
+                    const hrs = Math.floor(diffSec / 3600);
+                    const mins = Math.floor((diffSec % 3600) / 60);
+                    const secs = diffSec % 60;
+                    rel = `${hrs}h ${mins}m ${String(secs).padStart(2, '0')}s ago`;
                 }
                 
                 return `${timeStr} (${rel})`;
@@ -1575,7 +1589,7 @@ Audit Standard: SOC2 CC7.3 / ISO 27001 Automated Recovery Logged.`;
                                 </span>
                             </div>
                             <div class="incident-timestamp">
-                                <span>${formattedDate}</span> | <span class="code-pill">ID: ${inc.incident_id.substring(0, 8)}</span>
+                                <span class="live-timestamp" data-ts="${inc.timestamp}">${formattedDate}</span> | <span class="code-pill">ID: ${inc.incident_id.substring(0, 8)}</span>
                             </div>
                         </div>
 
@@ -1659,10 +1673,41 @@ Audit Standard: SOC2 CC7.3 / ISO 27001 Automated Recovery Logged.`;
             }
         }
 
+        function tickTimestamps() {
+            document.querySelectorAll('.live-timestamp').forEach(el => {
+                const ts = el.getAttribute('data-ts');
+                if (ts) {
+                    el.innerText = formatIncidentTime(ts);
+                }
+            });
+            const clockEl = document.getElementById('live-cluster-clock');
+            if (clockEl) {
+                const now = new Date();
+                clockEl.innerText = now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: true });
+            }
+        }
+
+        async function handleManualRefresh() {
+            const btn = document.getElementById('btn-refresh');
+            if (btn) btn.classList.add('rotating');
+            await fetchIncidents();
+            await fetchClusterOverview();
+            tickTimestamps();
+            const syncEl = document.getElementById('last-sync-time');
+            if (syncEl) {
+                const now = new Date();
+                syncEl.innerText = `⚡ Synced at ${now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: true })}`;
+            }
+            showToast('🔄 Stream synchronized to live cluster');
+            setTimeout(() => { if (btn) btn.classList.remove('rotating'); }, 600);
+        }
+
         // Initial fetch, real-time WebSocket, and auto-refresh fallback
         connectWebSocket();
         fetchClusterOverview();
         fetchIncidents();
+        tickTimestamps();
+        setInterval(tickTimestamps, 1000);
         setInterval(fetchIncidents, 3500);
         setInterval(fetchClusterOverview, 10000);
     </script>
