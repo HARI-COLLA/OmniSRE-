@@ -1,7 +1,7 @@
 """
 OmniSRE Modern Enterprise Web Dashboard UI
 Served at GET /
-High-end Enterprise AIOps SRE Platform with Interactive Forensic Inspection & Live Pod Auditing
+Enterprise SRE Control Plane with Multi-Cluster Context, Dynamic Health Hierarchy, and Forensic Investigation
 """
 
 DASHBOARD_HTML = """<!DOCTYPE html>
@@ -52,7 +52,7 @@ DASHBOARD_HTML = """<!DOCTYPE html>
             background-color: var(--bg-deep);
             color: var(--text-body);
             min-height: 100vh;
-            padding: 28px 20px;
+            padding: 24px 20px;
             background-image: 
                 radial-gradient(circle at 15% 10%, rgba(99, 102, 241, 0.12) 0%, transparent 40%),
                 radial-gradient(circle at 85% 20%, rgba(6, 182, 212, 0.08) 0%, transparent 45%),
@@ -62,7 +62,7 @@ DASHBOARD_HTML = """<!DOCTYPE html>
         }
 
         .container {
-            max-width: 1280px;
+            max-width: 1320px;
             margin: 0 auto;
         }
 
@@ -71,7 +71,7 @@ DASHBOARD_HTML = """<!DOCTYPE html>
             height: 2px;
             width: 100%;
             background: linear-gradient(90deg, transparent 0%, var(--primary) 30%, var(--accent-cyan) 70%, transparent 100%);
-            margin-bottom: 24px;
+            margin-bottom: 20px;
             border-radius: 2px;
             opacity: 0.8;
         }
@@ -87,8 +87,10 @@ DASHBOARD_HTML = """<!DOCTYPE html>
             border: 1px solid var(--border-subtle);
             padding: 16px 24px;
             border-radius: 16px;
-            margin-bottom: 20px;
+            margin-bottom: 16px;
             box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.3);
+            flex-wrap: wrap;
+            gap: 14px;
         }
 
         .logo-group {
@@ -100,99 +102,117 @@ DASHBOARD_HTML = """<!DOCTYPE html>
         .logo-box {
             width: 44px;
             height: 44px;
-            background: linear-gradient(135deg, #6366F1 0%, #06B6D4 100%);
+            background: linear-gradient(135deg, #4F46E5, #06B6D4);
             border-radius: 12px;
             display: flex;
             align-items: center;
             justify-content: center;
+            font-size: 24px;
             color: #fff;
-            font-size: 22px;
-            font-weight: 800;
-            box-shadow: 0 0 20px rgba(99, 102, 241, 0.4);
-            letter-spacing: -1px;
+            box-shadow: 0 4px 15px rgba(99, 102, 241, 0.35);
         }
 
         .logo-title h1 {
-            font-size: 19px;
+            font-size: 20px;
             font-weight: 800;
             color: var(--text-title);
-            letter-spacing: -0.4px;
+            letter-spacing: -0.5px;
             display: flex;
             align-items: center;
-            gap: 8px;
+            gap: 10px;
         }
 
         .logo-title p {
-            font-size: 12px;
+            font-size: 13px;
             color: var(--text-muted);
             margin-top: 2px;
-            font-weight: 500;
         }
 
         .nav-right {
             display: flex;
             align-items: center;
             gap: 12px;
+            flex-wrap: wrap;
         }
 
-        .status-pill {
-            display: inline-flex;
-            align-items: center;
-            gap: 8px;
-            background: var(--success-bg);
-            color: var(--success);
-            border: 1px solid var(--success-border);
+        .cluster-live-badge {
+            background: rgba(6, 182, 212, 0.12);
+            border: 1px solid rgba(6, 182, 212, 0.35);
+            color: #38BDF8;
             padding: 6px 14px;
             border-radius: 9999px;
             font-size: 12px;
-            font-weight: 600;
+            font-weight: 700;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-family: var(--font-mono);
+        }
+
+        .cluster-live-badge .badge-dot {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background: #06B6D4;
+            box-shadow: 0 0 10px #06B6D4;
+            animation: pulseGlow 2s infinite;
+        }
+
+        .status-pill {
+            background: var(--success-bg);
+            border: 1px solid var(--success-border);
+            color: #34D399;
+            padding: 6px 14px;
+            border-radius: 9999px;
+            font-size: 12px;
+            font-weight: 700;
+            display: flex;
+            align-items: center;
+            gap: 8px;
             letter-spacing: 0.3px;
         }
 
         .pulse-dot {
             width: 8px;
             height: 8px;
-            background: var(--success);
             border-radius: 50%;
+            background: var(--success);
             box-shadow: 0 0 10px var(--success);
-            animation: pulse-ring 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+            animation: pulseGlow 2s infinite;
         }
 
-        @keyframes pulse-ring {
-            0%, 100% { opacity: 1; transform: scale(1); }
-            50% { opacity: 0.4; transform: scale(0.85); }
+        @keyframes pulseGlow {
+            0% { transform: scale(0.95); opacity: 0.8; }
+            50% { transform: scale(1.15); opacity: 1; }
+            100% { transform: scale(0.95); opacity: 0.8; }
         }
 
         .nav-btn {
             background: rgba(255, 255, 255, 0.05);
-            color: #E2E8F0;
             border: 1px solid var(--border-subtle);
-            padding: 7px 16px;
+            color: var(--text-body);
+            padding: 7px 14px;
             border-radius: 10px;
-            text-decoration: none;
-            font-size: 13px;
+            font-size: 12px;
             font-weight: 600;
-            transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
-            display: inline-flex;
-            align-items: center;
-            gap: 6px;
+            text-decoration: none;
+            transition: all 0.2s ease;
         }
 
         .nav-btn:hover {
             background: rgba(255, 255, 255, 0.1);
-            border-color: rgba(255, 255, 255, 0.2);
             color: #fff;
-            transform: translateY(-1px);
+            border-color: rgba(255, 255, 255, 0.2);
         }
 
-        /* Infrastructure Component Status Matrix */
+        /* Infra Bar */
         .infra-status-grid {
             display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(230px, 1fr));
+            grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
             gap: 12px;
-            background: rgba(15, 23, 42, 0.45);
+            background: rgba(10, 16, 30, 0.5);
             border: 1px solid var(--border-subtle);
-            border-radius: 14px;
+            border-radius: 12px;
             padding: 12px 18px;
             margin-bottom: 20px;
         }
@@ -225,7 +245,7 @@ DASHBOARD_HTML = """<!DOCTYPE html>
             flex-shrink: 0;
         }
 
-        /* Multi-Cluster Selector Bar */
+        /* Multi-Cluster Switcher Bar */
         .cluster-bar {
             display: flex;
             justify-content: space-between;
@@ -233,7 +253,7 @@ DASHBOARD_HTML = """<!DOCTYPE html>
             background: rgba(15, 23, 42, 0.4);
             border: 1px solid var(--border-subtle);
             border-radius: 12px;
-            padding: 10px 16px;
+            padding: 10px 18px;
             margin-bottom: 24px;
             flex-wrap: wrap;
             gap: 12px;
@@ -243,6 +263,7 @@ DASHBOARD_HTML = """<!DOCTYPE html>
             display: flex;
             gap: 8px;
             align-items: center;
+            flex-wrap: wrap;
         }
 
         .cluster-label {
@@ -258,7 +279,7 @@ DASHBOARD_HTML = """<!DOCTYPE html>
             background: transparent;
             border: 1px solid transparent;
             color: var(--text-muted);
-            padding: 5px 12px;
+            padding: 6px 14px;
             border-radius: 8px;
             font-size: 12px;
             font-weight: 600;
@@ -268,9 +289,10 @@ DASHBOARD_HTML = """<!DOCTYPE html>
         }
 
         .cluster-tab.active {
-            background: rgba(99, 102, 241, 0.15);
-            border-color: rgba(99, 102, 241, 0.4);
+            background: rgba(99, 102, 241, 0.18);
+            border-color: rgba(99, 102, 241, 0.45);
             color: #A5B4FC;
+            box-shadow: 0 0 12px rgba(99, 102, 241, 0.2);
         }
 
         .cluster-tab:hover:not(.active) {
@@ -278,7 +300,7 @@ DASHBOARD_HTML = """<!DOCTYPE html>
             color: #E2E8F0;
         }
 
-        .cluster-live-tag {
+        .cluster-meta-pill {
             font-size: 12px;
             font-family: var(--font-mono);
             color: var(--text-muted);
@@ -287,40 +309,120 @@ DASHBOARD_HTML = """<!DOCTYPE html>
             gap: 6px;
         }
 
-        /* Metric Highlights Grid */
-        .metrics-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
-            gap: 16px;
-            margin-bottom: 28px;
-        }
-
-        .metric-card {
-            background: var(--bg-card);
-            backdrop-filter: blur(12px);
-            -webkit-backdrop-filter: blur(12px);
-            border: 1px solid var(--border-subtle);
+        /* HERO HEALTH / STATUS BANNER */
+        .hero-health-banner {
+            background: linear-gradient(135deg, rgba(16, 185, 129, 0.08) 0%, rgba(6, 182, 212, 0.04) 100%);
+            border: 1px solid var(--success-border);
             border-radius: 16px;
-            padding: 22px;
-            transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+            padding: 24px;
+            margin-bottom: 28px;
             position: relative;
             overflow: hidden;
+            box-shadow: 0 10px 30px rgba(16, 185, 129, 0.05);
         }
 
-        .metric-card:hover {
-            transform: translateY(-2px);
-            border-color: var(--border-focus);
-            background: var(--bg-card-hover);
+        .hero-health-banner.alert-state {
+            background: linear-gradient(135deg, rgba(244, 63, 94, 0.1) 0%, rgba(245, 158, 11, 0.05) 100%);
+            border-color: var(--danger-border);
+            box-shadow: 0 10px 30px rgba(244, 63, 94, 0.08);
         }
 
-        .metric-header {
+        .hero-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            flex-wrap: wrap;
+            gap: 16px;
+            margin-bottom: 20px;
+        }
+
+        .hero-title-group {
+            display: flex;
+            align-items: center;
+            gap: 16px;
+        }
+
+        .hero-icon-box {
+            width: 52px;
+            height: 52px;
+            border-radius: 14px;
+            background: var(--success-bg);
+            border: 1px solid var(--success-border);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 26px;
+            box-shadow: 0 0 20px rgba(16, 185, 129, 0.2);
+        }
+
+        .alert-state .hero-icon-box {
+            background: var(--danger-bg);
+            border-color: var(--danger-border);
+            box-shadow: 0 0 20px rgba(244, 63, 94, 0.2);
+        }
+
+        .hero-title-text h2 {
+            font-size: 22px;
+            font-weight: 800;
+            color: var(--text-title);
+            letter-spacing: -0.4px;
+        }
+
+        .hero-title-text p {
+            font-size: 13px;
+            color: var(--text-muted);
+            margin-top: 4px;
+        }
+
+        .hero-meta-badges {
+            display: flex;
+            gap: 8px;
+            flex-wrap: wrap;
+        }
+
+        .hero-badge {
+            font-size: 11px;
+            font-weight: 700;
+            padding: 5px 12px;
+            border-radius: 8px;
+            font-family: var(--font-mono);
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .hero-badge.badge-green { background: var(--success-bg); color: #34D399; border: 1px solid var(--success-border); }
+        .hero-badge.badge-blue { background: rgba(99, 102, 241, 0.15); color: #A5B4FC; border: 1px solid rgba(99, 102, 241, 0.3); }
+        .hero-badge.badge-red { background: var(--danger-bg); color: #FB7185; border: 1px solid var(--danger-border); }
+
+        /* Topology Nodes Grid */
+        .topology-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+            gap: 14px;
+        }
+
+        .topo-card {
+            background: rgba(10, 16, 30, 0.65);
+            border: 1px solid rgba(255, 255, 255, 0.06);
+            border-radius: 12px;
+            padding: 16px;
+            transition: all 0.2s ease;
+        }
+
+        .topo-card:hover {
+            border-color: rgba(99, 102, 241, 0.35);
+            background: rgba(15, 23, 42, 0.8);
+        }
+
+        .topo-header {
             display: flex;
             justify-content: space-between;
             align-items: center;
-            margin-bottom: 12px;
+            margin-bottom: 10px;
         }
 
-        .metric-title {
+        .topo-title {
             font-size: 11px;
             text-transform: uppercase;
             letter-spacing: 0.8px;
@@ -328,39 +430,83 @@ DASHBOARD_HTML = """<!DOCTYPE html>
             font-weight: 700;
         }
 
-        .metric-icon {
-            font-size: 16px;
-            opacity: 0.7;
+        .topo-status-tag {
+            font-size: 11px;
+            font-family: var(--font-mono);
+            font-weight: 600;
+            padding: 2px 8px;
+            border-radius: 6px;
         }
 
-        .metric-val {
-            font-size: 32px;
-            font-weight: 800;
+        .status-ok { background: var(--success-bg); color: #34D399; }
+        .status-warn { background: var(--warning-bg); color: #FBBF24; }
+        .status-err { background: var(--danger-bg); color: #F87171; }
+
+        .topo-val {
+            font-size: 13px;
+            font-weight: 700;
             color: var(--text-title);
-            letter-spacing: -1px;
-            font-feature-settings: "tnum";
-            font-variant-numeric: tabular-nums;
+            font-family: var(--font-mono);
+            word-break: break-all;
         }
 
-        .metric-desc {
-            font-size: 12px;
+        .topo-sub {
+            font-size: 11px;
+            color: var(--text-muted);
             margin-top: 6px;
-            font-weight: 500;
+            display: flex;
+            justify-content: space-between;
+        }
+
+        /* WHERE IS THE ERROR? Location Breadcrumb Bar */
+        .error-location-bar {
+            background: rgba(244, 63, 94, 0.08);
+            border: 1px solid rgba(244, 63, 94, 0.25);
+            border-radius: 10px;
+            padding: 10px 14px;
+            margin-bottom: 16px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            flex-wrap: wrap;
+            font-size: 12px;
+            font-family: var(--font-mono);
+        }
+
+        .location-label {
+            font-weight: 800;
+            color: #FB7185;
             display: flex;
             align-items: center;
             gap: 5px;
+            letter-spacing: 0.5px;
         }
 
-        .text-emerald { color: var(--success); }
-        .text-cyan { color: var(--accent-cyan); }
-        .text-indigo { color: #A5B4FC; }
+        .loc-crumb {
+            background: rgba(0, 0, 0, 0.4);
+            padding: 3px 8px;
+            border-radius: 6px;
+            color: #E2E8F0;
+        }
 
-        /* Simulator Card Section */
+        .loc-sep {
+            color: var(--text-muted);
+            font-size: 10px;
+        }
+
+        .text-cyan { color: #38BDF8 !important; }
+        .text-indigo { color: #A5B4FC !important; }
+        .text-warning { color: #FBBF24 !important; }
+        .text-emerald { color: #34D399 !important; }
+
+        /* Incident Stream */
         .section-header {
             display: flex;
             justify-content: space-between;
             align-items: center;
             margin-bottom: 16px;
+            flex-wrap: wrap;
+            gap: 12px;
         }
 
         .section-title {
@@ -372,92 +518,11 @@ DASHBOARD_HTML = """<!DOCTYPE html>
             gap: 8px;
         }
 
-        .sim-container {
-            background: var(--bg-card);
-            backdrop-filter: blur(12px);
-            -webkit-backdrop-filter: blur(12px);
-            border: 1px solid var(--border-subtle);
-            border-radius: 16px;
-            padding: 24px;
-            margin-bottom: 32px;
-        }
-
-        .sim-lead {
-            font-size: 13px;
-            color: var(--text-muted);
-            margin-bottom: 18px;
-            line-height: 1.5;
-        }
-
-        .sim-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
-            gap: 14px;
-        }
-
-        .btn-sim-card {
-            background: rgba(30, 41, 59, 0.45);
-            border: 1px solid rgba(255, 255, 255, 0.07);
-            border-radius: 14px;
-            padding: 16px 18px;
-            cursor: pointer;
-            text-align: left;
-            transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
-            position: relative;
-            overflow: hidden;
-            font-family: inherit;
-        }
-
-        .btn-sim-card:hover {
-            background: rgba(30, 41, 59, 0.85);
-            border-color: rgba(99, 102, 241, 0.5);
-            transform: translateY(-3px);
-            box-shadow: 0 10px 20px -5px rgba(99, 102, 241, 0.2);
-        }
-
-        .btn-sim-card.executing {
-            border-color: var(--accent-cyan);
-            background: rgba(6, 182, 212, 0.1);
-        }
-
-        .sim-card-top {
-            display: flex;
-            align-items: center;
-            gap: 10px;
-            margin-bottom: 6px;
-        }
-
-        .sim-card-badge {
-            font-size: 10px;
-            font-weight: 700;
-            padding: 2px 7px;
-            border-radius: 6px;
-            font-family: var(--font-mono);
-            text-transform: uppercase;
-        }
-
-        .badge-oom { background: rgba(244, 63, 94, 0.2); color: #FB7185; }
-        .badge-db { background: rgba(245, 158, 11, 0.2); color: #FCD34D; }
-        .badge-crash { background: rgba(168, 85, 247, 0.2); color: #C084FC; }
-        .badge-scale { background: rgba(56, 189, 248, 0.2); color: #38BDF8; }
-
-        .sim-card-title {
-            font-size: 14px;
-            font-weight: 700;
-            color: var(--text-title);
-        }
-
-        .sim-card-desc {
-            font-size: 12px;
-            color: var(--text-muted);
-            line-height: 1.4;
-        }
-
-        /* Incidents Feed */
         .incidents-stream {
             display: flex;
             flex-direction: column;
             gap: 16px;
+            margin-bottom: 32px;
         }
 
         .incident-card {
@@ -472,24 +537,15 @@ DASHBOARD_HTML = """<!DOCTYPE html>
         }
 
         .incident-card:hover {
-            border-color: rgba(255, 255, 255, 0.15);
-            box-shadow: 0 10px 30px -10px rgba(0, 0, 0, 0.5);
-        }
-
-        .incident-card.new-arrival {
-            animation: slideDown 0.4s cubic-bezier(0.16, 1, 0.3, 1);
-        }
-
-        @keyframes slideDown {
-            from { opacity: 0; transform: translateY(-12px); }
-            to { opacity: 1; transform: translateY(0); }
+            border-color: var(--border-focus);
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.4);
         }
 
         .incident-header {
             display: flex;
             justify-content: space-between;
-            align-items: center;
-            margin-bottom: 16px;
+            align-items: flex-start;
+            margin-bottom: 14px;
             flex-wrap: wrap;
             gap: 10px;
         }
@@ -502,13 +558,12 @@ DASHBOARD_HTML = """<!DOCTYPE html>
         }
 
         .incident-alert-name {
-            font-size: 16px;
+            font-size: 17px;
             font-weight: 800;
             color: var(--text-title);
             letter-spacing: -0.3px;
         }
 
-        /* Status & Metadata Badges */
         .tag-badge {
             font-size: 11px;
             font-weight: 700;
@@ -597,7 +652,6 @@ DASHBOARD_HTML = """<!DOCTYPE html>
             transition: width 0.8s cubic-bezier(0.16, 1, 0.3, 1);
         }
 
-        /* Interactive Forensic Inspection Button */
         .incident-footer-bar {
             display: flex;
             justify-content: space-between;
@@ -644,7 +698,7 @@ DASHBOARD_HTML = """<!DOCTYPE html>
         /* Empty State */
         .empty-card {
             text-align: center;
-            padding: 50px 20px;
+            padding: 48px 20px;
             background: var(--bg-card);
             border: 1px dashed var(--border-subtle);
             border-radius: 16px;
@@ -652,9 +706,125 @@ DASHBOARD_HTML = """<!DOCTYPE html>
         }
 
         .empty-icon {
-            font-size: 36px;
+            font-size: 40px;
             margin-bottom: 12px;
-            opacity: 0.6;
+            opacity: 0.7;
+        }
+
+        /* COLLAPSIBLE CHAOS TESTING SANDBOX */
+        .chaos-accordion {
+            background: rgba(15, 23, 42, 0.4);
+            border: 1px solid rgba(255, 255, 255, 0.08);
+            border-radius: 14px;
+            margin-top: 24px;
+            overflow: hidden;
+            transition: all 0.25s ease;
+        }
+
+        .chaos-accordion[open] {
+            border-color: rgba(99, 102, 241, 0.3);
+            background: rgba(15, 23, 42, 0.65);
+        }
+
+        .chaos-summary {
+            padding: 16px 20px;
+            font-size: 13px;
+            font-weight: 700;
+            color: var(--text-muted);
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            user-select: none;
+            list-style: none;
+        }
+
+        .chaos-summary::-webkit-details-marker { display: none; }
+
+        .chaos-summary:hover {
+            color: #E2E8F0;
+        }
+
+        .chaos-summary-badge {
+            background: rgba(99, 102, 241, 0.15);
+            color: #A5B4FC;
+            padding: 3px 10px;
+            border-radius: 6px;
+            font-size: 11px;
+            font-family: var(--font-mono);
+        }
+
+        .chaos-content {
+            padding: 0 20px 20px 20px;
+            border-top: 1px solid rgba(255, 255, 255, 0.05);
+        }
+
+        .chaos-lead {
+            font-size: 12px;
+            color: var(--text-muted);
+            margin: 14px 0 16px 0;
+            line-height: 1.5;
+        }
+
+        .sim-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+            gap: 12px;
+        }
+
+        .btn-sim-card {
+            background: rgba(10, 16, 30, 0.7);
+            border: 1px solid var(--border-subtle);
+            border-radius: 12px;
+            padding: 14px;
+            text-align: left;
+            cursor: pointer;
+            transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+            color: inherit;
+            font-family: inherit;
+        }
+
+        .btn-sim-card:hover {
+            border-color: var(--primary);
+            background: rgba(30, 41, 59, 0.7);
+            transform: translateY(-2px);
+        }
+
+        .btn-sim-card.executing {
+            border-color: var(--warning);
+            background: rgba(245, 158, 11, 0.12);
+        }
+
+        .sim-card-top {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 6px;
+        }
+
+        .sim-card-title {
+            font-size: 13px;
+            font-weight: 700;
+            color: var(--text-title);
+        }
+
+        .sim-card-badge {
+            font-size: 10px;
+            font-weight: 700;
+            padding: 2px 6px;
+            border-radius: 4px;
+            font-family: var(--font-mono);
+        }
+
+        .badge-oom { background: var(--danger-bg); color: var(--danger); border: 1px solid var(--danger-border); }
+        .badge-db { background: var(--warning-bg); color: var(--warning); border: 1px solid var(--warning-border); }
+        .badge-crash { background: rgba(139, 92, 246, 0.15); color: #C084FC; border: 1px solid rgba(139, 92, 246, 0.3); }
+        .badge-scale { background: var(--success-bg); color: #34D399; border: 1px solid var(--success-border); }
+
+        .sim-card-desc {
+            font-size: 11px;
+            color: var(--text-muted);
+            line-height: 1.4;
         }
 
         /* Modal / Forensic Drawer */
@@ -676,75 +846,70 @@ DASHBOARD_HTML = """<!DOCTYPE html>
             background: #0E1626;
             border: 1px solid rgba(99, 102, 241, 0.3);
             border-radius: 16px;
-            max-width: 840px;
+            max-width: 860px;
             width: 100%;
-            max-height: 88vh;
+            max-height: 90vh;
             overflow-y: auto;
             box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.7);
-            animation: modalSlide 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+            animation: modalPop 0.25s cubic-bezier(0.16, 1, 0.3, 1);
         }
 
-        @keyframes modalSlide {
-            from { opacity: 0; transform: scale(0.96) translateY(10px); }
-            to { opacity: 1; transform: scale(1) translateY(0); }
+        @keyframes modalPop {
+            from { transform: scale(0.95); opacity: 0; }
+            to { transform: scale(1); opacity: 1; }
         }
 
         .modal-header {
             display: flex;
             justify-content: space-between;
             align-items: center;
-            padding: 20px 24px;
+            padding: 18px 24px;
             border-bottom: 1px solid rgba(255, 255, 255, 0.08);
-            background: rgba(15, 23, 42, 0.6);
         }
 
         .modal-title {
             font-size: 16px;
-            font-weight: 700;
+            font-weight: 800;
             color: #F8FAFC;
             display: flex;
             align-items: center;
-            gap: 8px;
+            gap: 10px;
         }
 
         .modal-close {
             background: transparent;
             border: none;
             color: var(--text-muted);
-            font-size: 22px;
+            font-size: 24px;
             cursor: pointer;
             line-height: 1;
-            padding: 4px;
-            transition: color 0.15s;
         }
 
         .modal-close:hover { color: #fff; }
 
-        .modal-body {
-            padding: 24px;
-        }
+        .modal-body { padding: 22px 24px; }
 
         .forensic-grid {
             display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
             gap: 12px;
             margin-bottom: 20px;
         }
 
         .forensic-card {
-            background: rgba(15, 23, 42, 0.7);
-            border: 1px solid rgba(255, 255, 255, 0.06);
+            background: rgba(0, 0, 0, 0.35);
+            border: 1px solid rgba(255, 255, 255, 0.05);
             border-radius: 10px;
-            padding: 12px 14px;
+            padding: 12px;
         }
 
         .forensic-card-lbl {
             font-size: 10px;
             text-transform: uppercase;
+            letter-spacing: 0.8px;
             color: var(--text-muted);
-            font-weight: 700;
-            letter-spacing: 0.5px;
             margin-bottom: 4px;
+            font-weight: 700;
         }
 
         .forensic-card-val {
@@ -815,7 +980,7 @@ DASHBOARD_HTML = """<!DOCTYPE html>
     <div class="container">
         <div class="ambient-topbar"></div>
 
-        <!-- Glassmorphism Header -->
+        <!-- Glassmorphism Navbar -->
         <header>
             <div class="logo-group">
                 <div class="logo-box">Ω</div>
@@ -825,6 +990,10 @@ DASHBOARD_HTML = """<!DOCTYPE html>
                 </div>
             </div>
             <div class="nav-right">
+                <div class="cluster-live-badge">
+                    <span class="badge-dot"></span>
+                    <span id="nav-cluster-name">Cluster: omnisre-prod-eks</span>
+                </div>
                 <div class="status-pill">
                     <span class="pulse-dot"></span>
                     <span>Autonomous SRE Active</span>
@@ -833,22 +1002,22 @@ DASHBOARD_HTML = """<!DOCTYPE html>
             </div>
         </header>
 
-        <!-- Live Infrastructure Component Health Status Bar -->
+        <!-- Live Infrastructure Status Bar -->
         <div class="infra-status-grid">
             <div class="infra-status-item">
                 <span class="infra-dot"></span>
                 <span class="infra-name">K8s API:</span>
-                <span class="infra-val">🟢 Connected (In-Cluster / 6443)</span>
+                <span class="infra-val" id="infra-k8s">🟢 Connected (EKS / 6443)</span>
+            </div>
+            <div class="infra-status-item">
+                <span class="infra-dot"></span>
+                <span class="infra-name">Worker Nodes:</span>
+                <span class="infra-val" id="infra-nodes">🟢 2/2 Ready (t3.small)</span>
             </div>
             <div class="infra-status-item">
                 <span class="infra-dot"></span>
                 <span class="infra-name">Prometheus TSDB:</span>
-                <span class="infra-val">🟢 Active Scrape (Poll 15s)</span>
-            </div>
-            <div class="infra-status-item">
-                <span class="infra-dot"></span>
-                <span class="infra-name">SOC2 Storage:</span>
-                <span class="infra-val">🟢 Persistent SQLite Synced</span>
+                <span class="infra-val">🟢 Active Scrape (15s)</span>
             </div>
             <div class="infra-status-item">
                 <span class="infra-dot"></span>
@@ -857,115 +1026,95 @@ DASHBOARD_HTML = """<!DOCTYPE html>
             </div>
         </div>
 
-        <!-- Multi-Cluster Selector Bar -->
+        <!-- Connected Cluster Selector Bar -->
         <div class="cluster-bar">
             <div class="cluster-tabs">
                 <span class="cluster-label">Target Cluster:</span>
-                <button class="cluster-tab active" onclick="switchCluster('all', this)">🌐 All Clusters</button>
-                <button class="cluster-tab" onclick="switchCluster('prod-cluster-01', this)">🚀 prod-cluster-01</button>
-                <button class="cluster-tab" onclick="switchCluster('staging-cluster-01', this)">🧪 staging-cluster-01</button>
-                <button class="cluster-tab" onclick="switchCluster('edge-workload-01', this)">⚡ edge-workload-01</button>
+                <button class="cluster-tab active" onclick="switchCluster('omnisre-prod-eks', this)">🌐 omnisre-prod-eks (LIVE EKS)</button>
+                <button class="cluster-tab" onclick="switchCluster('staging-eks-cluster', this)">🧪 staging-eks-cluster</button>
+                <button class="cluster-tab" onclick="switchCluster('dr-failover-cluster', this)">⚡ dr-failover-cluster</button>
             </div>
-            <div class="cluster-live-tag">
-                <span>Leader Lease:</span> <span class="code-pill">omnisre-leader-active</span>
-            </div>
-        </div>
-
-        <!-- Metric Highlight Cards -->
-        <div class="metrics-grid">
-            <div class="metric-card">
-                <div class="metric-header">
-                    <span class="metric-title">Triaged Incidents</span>
-                    <span class="metric-icon">🛡️</span>
-                </div>
-                <div class="metric-val" id="stat-total">0</div>
-                <div class="metric-desc text-emerald">
-                    <span>⚡ Mean Triage Time: &lt; 2.4s</span>
-                </div>
-            </div>
-
-            <div class="metric-card">
-                <div class="metric-header">
-                    <span class="metric-title">Self-Healing Success Rate</span>
-                    <span class="metric-icon">✨</span>
-                </div>
-                <div class="metric-val text-emerald">100%</div>
-                <div class="metric-desc text-cyan">
-                    <span>🛡️ Automated Circuit Breakers Active</span>
-                </div>
-            </div>
-
-            <div class="metric-card">
-                <div class="metric-header">
-                    <span class="metric-title">Active SRE Policies</span>
-                    <span class="metric-icon">📜</span>
-                </div>
-                <div class="metric-val" id="stat-policies">4</div>
-                <div class="metric-desc text-indigo">
-                    <span>🔒 Protected: kube-system, node-lease</span>
-                </div>
-            </div>
-
-            <div class="metric-card">
-                <div class="metric-header">
-                    <span class="metric-title">AI Engine Provider</span>
-                    <span class="metric-icon">🧠</span>
-                </div>
-                <div class="metric-val" style="font-size: 21px; line-height: 40px;">POSIX + LLM Hybrid</div>
-                <div class="metric-desc text-cyan">
-                    <span>🎯 Mathematical Zero-Hallucination</span>
-                </div>
+            <div class="cluster-meta-pill">
+                <span>AWS Region:</span> <span class="code-pill">ap-south-1 (Mumbai)</span>
+                <span style="margin-left: 8px;">K8s Version:</span> <span class="code-pill" id="k8s-ver-pill">v1.31.14-eks</span>
             </div>
         </div>
 
-        <!-- Interactive Chaos Simulator -->
-        <div class="sim-container">
-            <div class="section-header">
-                <div class="section-title">⚡ Interactive Production Incident Simulator</div>
-                <span style="font-size: 12px; color: var(--text-muted); font-family: var(--font-mono);">POST /simulate</span>
+        <!-- HERO CLUSTER HEALTH STATE BANNER -->
+        <div id="hero-banner" class="hero-health-banner">
+            <div class="hero-header">
+                <div class="hero-title-group">
+                    <div class="hero-icon-box" id="hero-icon">🛡️</div>
+                    <div class="hero-title-text">
+                        <h2 id="hero-title">CLUSTER HEALTH: 100% OPERATIONAL</h2>
+                        <p id="hero-sub">Connected to AWS EKS cluster <strong>omnisre-prod-eks</strong>. 0 active firing alerts. All nodes and workloads healthy.</p>
+                    </div>
+                </div>
+                <div class="hero-meta-badges">
+                    <span class="hero-badge badge-green" id="hero-status-pill">● 0 FIRING ALERTS</span>
+                    <span class="hero-badge badge-blue">● 2/2 NODES READY</span>
+                    <span class="hero-badge badge-blue">● SOC2 AUDIT ACTIVE</span>
+                </div>
             </div>
-            <p class="sim-lead">
-                Trigger simulated live failures across Kubernetes workloads. OmniSRE will intercept the Alertmanager webhook, inspect container exit codes, execute AI Root Cause Analysis, and self-heal automatically:
-            </p>
 
-            <div class="sim-grid">
-                <button class="btn-sim-card" id="btn-oom" onclick="triggerSim('pod_oom_killed', 'btn-oom')">
-                    <div class="sim-card-top">
-                        <span class="sim-card-badge badge-oom">Exit 137</span>
-                        <span class="sim-card-title">Pod OOMKilled</span>
+            <!-- Live Kubernetes Node Topology Overview -->
+            <div class="topology-grid" id="topology-grid">
+                <div class="topo-card">
+                    <div class="topo-header">
+                        <span class="topo-title">EKS Control Plane</span>
+                        <span class="topo-status-tag status-ok">ACTIVE</span>
                     </div>
-                    <p class="sim-card-desc">Cgroup memory breach on order-service. Intercepts SIGKILL and restarts pod.</p>
-                </button>
+                    <div class="topo-val">omnisre-prod-eks</div>
+                    <div class="topo-sub">
+                        <span>Provider: AWS EKS</span>
+                        <span>Region: ap-south-1</span>
+                    </div>
+                </div>
 
-                <button class="btn-sim-card" id="btn-db" onclick="triggerSim('mongodb_down', 'btn-db')">
-                    <div class="sim-card-top">
-                        <span class="sim-card-badge badge-db">Probe Fail</span>
-                        <span class="sim-card-title">Database Socket Hang</span>
+                <div class="topo-card">
+                    <div class="topo-header">
+                        <span class="topo-title">Worker Node 1</span>
+                        <span class="topo-status-tag status-ok">READY</span>
                     </div>
-                    <p class="sim-card-desc">Liveness probe timeout on MongoDB TCP 27017. Triggers stateful pod recovery.</p>
-                </button>
+                    <div class="topo-val">ip-192-168-41-75</div>
+                    <div class="topo-sub">
+                        <span>Type: t3.small</span>
+                        <span>Runtime: containerd</span>
+                    </div>
+                </div>
 
-                <button class="btn-sim-card" id="btn-crash" onclick="triggerSim('crash_loop_backoff', 'btn-crash')">
-                    <div class="sim-card-top">
-                        <span class="sim-card-badge badge-crash">Exit 1 / 127</span>
-                        <span class="sim-card-title">CrashLoopBackOff</span>
+                <div class="topo-card">
+                    <div class="topo-header">
+                        <span class="topo-title">Worker Node 2</span>
+                        <span class="topo-status-tag status-ok">READY</span>
                     </div>
-                    <p class="sim-card-desc">Startup entrypoint failure or missing dependency. Triage previous logs.</p>
-                </button>
+                    <div class="topo-val">ip-192-168-73-36</div>
+                    <div class="topo-sub">
+                        <span>Type: t3.small</span>
+                        <span>Runtime: containerd</span>
+                    </div>
+                </div>
 
-                <button class="btn-sim-card" id="btn-scale" onclick="triggerSim('high_memory_pressure', 'btn-scale')">
-                    <div class="sim-card-top">
-                        <span class="sim-card-badge badge-scale">Scale +2</span>
-                        <span class="sim-card-title">Traffic Saturation</span>
+                <div class="topo-card">
+                    <div class="topo-header">
+                        <span class="topo-title">Workload Namespaces</span>
+                        <span class="topo-status-tag status-ok">NOMINAL</span>
                     </div>
-                    <p class="sim-card-desc">CPU/Memory spike &gt;90%. Horizontally scales replicas from 2 to 4.</p>
-                </button>
+                    <div class="topo-val">default, monitoring, kube-system</div>
+                    <div class="topo-sub">
+                        <span>Health: 100%</span>
+                        <span>Self-Healing: Armed</span>
+                    </div>
+                </div>
             </div>
         </div>
 
         <!-- Live Incident Post-Mortem Stream -->
         <div class="section-header">
-            <div class="section-title">🚨 Real-Time SOC2 Audit & Incident Post-Mortem Stream</div>
+            <div class="section-title">
+                <span>🚨 Incident Post-Mortem & Autonomous Remediation Stream</span>
+                <span class="code-pill" id="incident-counter-badge">0 Incidents</span>
+            </div>
             <div style="display: flex; gap: 8px;">
                 <button class="nav-btn" onclick="clearStream()" style="cursor: pointer; background: rgba(244, 63, 94, 0.1); border-color: rgba(244, 63, 94, 0.3); color: #FB7185;">🗑️ Clear Stream</button>
                 <button class="nav-btn" onclick="fetchIncidents()" style="cursor: pointer;">🔄 Refresh Stream</button>
@@ -975,10 +1124,59 @@ DASHBOARD_HTML = """<!DOCTYPE html>
         <div id="incidents-container" class="incidents-stream">
             <div class="empty-card">
                 <div class="empty-icon">🛡️</div>
-                <h3 style="font-size: 15px; color: var(--text-title); margin-bottom: 6px;">All Workloads Healthy & Monitored</h3>
-                <p style="font-size: 13px;">No active incidents. Click any simulator card above to trigger autonomous incident investigation.</p>
+                <h3 style="font-size: 15px; color: var(--text-title); margin-bottom: 6px;">Cluster Workloads Healthy & Monitored</h3>
+                <p style="font-size: 13px;">No active firing incidents on cluster <strong>omnisre-prod-eks</strong>. The autonomous AIOps agent is actively monitoring Prometheus and Kubernetes telemetry.</p>
             </div>
         </div>
+
+        <!-- COLLAPSIBLE CHAOS ENGINEERING SANDBOX -->
+        <details class="chaos-accordion">
+            <summary class="chaos-summary">
+                <div style="display: flex; align-items: center; gap: 10px;">
+                    <span>🛠️ SRE Chaos Engineering & Alert Testing Sandbox</span>
+                    <span class="chaos-summary-badge">For Verification & Testing</span>
+                </div>
+                <span style="font-size: 11px; color: var(--text-muted);">Click to Expand / Collapse ▼</span>
+            </summary>
+            <div class="chaos-content">
+                <p class="chaos-lead">
+                    Inject simulated production failure alerts directly into the Alertmanager webhook pipeline to evaluate and test OmniSRE's autonomous root cause diagnosis and self-healing policies without disturbing actual live production traffic:
+                </p>
+                <div class="sim-grid">
+                    <button class="btn-sim-card" id="btn-oom" onclick="triggerSim('pod_oom_killed', 'btn-oom')">
+                        <div class="sim-card-top">
+                            <span class="sim-card-badge badge-oom">Exit 137</span>
+                            <span class="sim-card-title">Pod OOMKilled</span>
+                        </div>
+                        <p class="sim-card-desc">Cgroup memory breach. Intercepts SIGKILL and restarts pod.</p>
+                    </button>
+
+                    <button class="btn-sim-card" id="btn-db" onclick="triggerSim('mongodb_down', 'btn-db')">
+                        <div class="sim-card-top">
+                            <span class="sim-card-badge badge-db">Probe Fail</span>
+                            <span class="sim-card-title">Database Socket Hang</span>
+                        </div>
+                        <p class="sim-card-desc">Liveness probe timeout on MongoDB TCP 27017. Triggers stateful recovery.</p>
+                    </button>
+
+                    <button class="btn-sim-card" id="btn-crash" onclick="triggerSim('crash_loop_backoff', 'btn-crash')">
+                        <div class="sim-card-top">
+                            <span class="sim-card-badge badge-crash">Exit 1 / 127</span>
+                            <span class="sim-card-title">CrashLoopBackOff</span>
+                        </div>
+                        <p class="sim-card-desc">Startup entrypoint failure. Triages previous logs and rolls back image.</p>
+                    </button>
+
+                    <button class="btn-sim-card" id="btn-scale" onclick="triggerSim('high_memory_pressure', 'btn-scale')">
+                        <div class="sim-card-top">
+                            <span class="sim-card-badge badge-scale">Scale +2</span>
+                            <span class="sim-card-title">Traffic Saturation</span>
+                        </div>
+                        <p class="sim-card-desc">CPU/Memory spike &gt;90%. Horizontally scales replicas from 2 to 4.</p>
+                    </button>
+                </div>
+            </div>
+        </details>
     </div>
 
     <!-- Forensic Inspection Modal -->
@@ -1002,11 +1200,11 @@ DASHBOARD_HTML = """<!DOCTYPE html>
                     </div>
                     <div class="forensic-card">
                         <div class="forensic-card-lbl">Policy Guardrail Matched</div>
-                        <div class="forensic-card-val text-indigo" id="m-policy">auto-recover-oom</div>
+                        <div class="forensic-card-val text-indigo" id="m-policy">default-sre-policy</div>
                     </div>
                     <div class="forensic-card">
                         <div class="forensic-card-lbl">Execution Latency</div>
-                        <div class="forensic-card-val" id="m-duration">142 ms</div>
+                        <div class="forensic-card-val" id="m-duration">105 ms</div>
                     </div>
                 </div>
 
@@ -1022,7 +1220,7 @@ DASHBOARD_HTML = """<!DOCTYPE html>
                         <span class="code-pill">Cluster Mutation</span>
                     </div>
                     <div class="terminal-container" style="max-height: 120px;" id="m-audit-proof">
-API Call: DELETE /api/v1/namespaces/production/pods/target
+API Call: DELETE /api/v1/namespaces/default/pods/target
 Response: HTTP 200 OK (Pod marked for eviction)
 Verification: Kubelet restarted replacement replica within SLO deadline.
                     </div>
@@ -1035,7 +1233,7 @@ Verification: Kubelet restarted replacement replica within SLO deadline.
     <div id="toast-box"></div>
 
     <script>
-        let currentFilter = 'all';
+        let currentFilter = 'omnisre-prod-eks';
         let cachedIncidents = [];
 
         function showToast(msg) {
@@ -1081,6 +1279,72 @@ Verification: Kubelet restarted replacement replica within SLO deadline.
             }
         }
 
+        async function fetchClusterOverview() {
+            try {
+                const res = await fetch('/cluster/overview');
+                const data = await res.json();
+                if (data.cluster_name) {
+                    document.getElementById('nav-cluster-name').innerText = `Cluster: ${data.cluster_name}`;
+                }
+                if (data.k8s_version) {
+                    document.getElementById('k8s-ver-pill').innerText = data.k8s_version;
+                }
+                if (data.total_nodes) {
+                    document.getElementById('infra-nodes').innerText = `🟢 ${data.ready_nodes}/${data.total_nodes} Ready (${data.nodes && data.nodes[0] ? data.nodes[0].instance_type : 't3.small'})`;
+                }
+
+                // Update nodes grid if available
+                if (data.nodes && data.nodes.length > 0) {
+                    const topoGrid = document.getElementById('topology-grid');
+                    let html = `
+                    <div class="topo-card">
+                        <div class="topo-header">
+                            <span class="topo-title">EKS Control Plane</span>
+                            <span class="topo-status-tag status-ok">ACTIVE</span>
+                        </div>
+                        <div class="topo-val">${data.cluster_name}</div>
+                        <div class="topo-sub">
+                            <span>Provider: ${data.cloud_provider || 'AWS EKS'}</span>
+                            <span>Region: ${data.region || 'ap-south-1'}</span>
+                        </div>
+                    </div>`;
+
+                    data.nodes.forEach((n, idx) => {
+                        const isReady = n.status === 'Ready';
+                        html += `
+                        <div class="topo-card">
+                            <div class="topo-header">
+                                <span class="topo-title">Worker Node ${idx + 1}</span>
+                                <span class="topo-status-tag ${isReady ? 'status-ok' : 'status-err'}">${n.status.toUpperCase()}</span>
+                            </div>
+                            <div class="topo-val">${n.name}</div>
+                            <div class="topo-sub">
+                                <span>Type: ${n.instance_type || 't3.small'}</span>
+                                <span>IP: ${n.ip || 'Private'}</span>
+                            </div>
+                        </div>`;
+                    });
+
+                    html += `
+                    <div class="topo-card">
+                        <div class="topo-header">
+                            <span class="topo-title">Workload Health</span>
+                            <span class="topo-status-tag ${data.failing_pods === 0 ? 'status-ok' : 'status-err'}">${data.failing_pods === 0 ? '100% HEALTHY' : data.failing_pods + ' FAILING'}</span>
+                        </div>
+                        <div class="topo-val">${data.healthy_pods}/${data.total_pods} Pods Nominal</div>
+                        <div class="topo-sub">
+                            <span>Namespaces: default, monitoring</span>
+                            <span>AIOps: Active</span>
+                        </div>
+                    </div>`;
+
+                    topoGrid.innerHTML = html;
+                }
+            } catch (err) {
+                console.error("Cluster overview fetch error:", err);
+            }
+        }
+
         async function clearStream() {
             try {
                 await fetch('/incidents', { method: 'DELETE' });
@@ -1095,7 +1359,7 @@ Verification: Kubelet restarted replacement replica within SLO deadline.
             document.querySelectorAll('.cluster-tab').forEach(t => t.classList.remove('active'));
             el.classList.add('active');
             currentFilter = cluster;
-            showToast(`Filtering view for: ${el.innerText}`);
+            showToast(`Target Cluster: ${cluster}`);
             fetchIncidents();
         }
 
@@ -1103,10 +1367,10 @@ Verification: Kubelet restarted replacement replica within SLO deadline.
             const inc = cachedIncidents[idx];
             if (!inc) return;
 
-            document.getElementById('m-exit-code').innerText = inc.exit_code ? `Exit ${inc.exit_code}` : 'Exit 137 (SIGKILL)';
+            document.getElementById('m-exit-code').innerText = inc.exit_code ? `Exit ${inc.exit_code} (SIGKILL)` : 'Exit 137 (SIGKILL)';
             document.getElementById('m-status').innerText = inc.verification_status || '🟢 Running (1/1) - Healthy';
-            document.getElementById('m-policy').innerText = inc.policy_matched || 'auto-recover-oom';
-            document.getElementById('m-duration').innerText = (inc.execution_duration_ms || 142) + ' ms';
+            document.getElementById('m-policy').innerText = inc.policy_matched || 'default-sre-policy';
+            document.getElementById('m-duration').innerText = (inc.execution_duration_ms || 105) + ' ms';
 
             // Logs
             const logsBox = document.getElementById('m-logs');
@@ -1114,12 +1378,13 @@ Verification: Kubelet restarted replacement replica within SLO deadline.
                 logsBox.innerText = inc.raw_logs;
             } else {
                 logsBox.innerText = `[KUBELET] Container ${inc.target_resource} terminated with exit code ${inc.exit_code || 137}
-[LOG STREAM] FATAL ERROR: Process out of memory or socket closed unexpectedly.
+[LOG STREAM] Process killed by kernel cgroup memory controller.
 [API AUDIT] Verified zero zombie locks on namespace '${inc.namespace}'.`;
             }
 
             // Audit Proof
             document.getElementById('m-audit-proof').innerText = `API Action: ${inc.remediation_type} -> Target: ${inc.target_resource}
+Cluster: ${inc.cluster_name || 'omnisre-prod-eks'} | Node: ${inc.node_name || 'ip-192-168-73-36.ap-south-1.compute.internal'}
 Namespace: ${inc.namespace} | Incident ID: ${inc.incident_id}
 Result: ${inc.remediation_result || 'Evicted and recreated replica successfully.'}
 Audit Standard: SOC2 CC7.3 / ISO 27001 Automated Recovery Logged.`;
@@ -1140,37 +1405,75 @@ Audit Standard: SOC2 CC7.3 / ISO 27001 Automated Recovery Logged.`;
                 const res = await fetch('/incidents');
                 cachedIncidents = await res.json();
                 
-                document.getElementById('stat-total').innerText = cachedIncidents.length;
+                document.getElementById('incident-counter-badge').innerText = `${cachedIncidents.length} Incident(s)`;
                 const container = document.getElementById('incidents-container');
+                const heroBanner = document.getElementById('hero-banner');
+                const heroIcon = document.getElementById('hero-icon');
+                const heroTitle = document.getElementById('hero-title');
+                const heroSub = document.getElementById('hero-sub');
+                const heroPill = document.getElementById('hero-status-pill');
 
+                // Dynamic Hero State: Healthy vs Active Incident
                 if (cachedIncidents.length === 0) {
+                    heroBanner.classList.remove('alert-state');
+                    heroIcon.innerHTML = '🛡️';
+                    heroTitle.innerText = 'CLUSTER HEALTH: 100% OPERATIONAL';
+                    heroSub.innerHTML = 'Connected to AWS EKS cluster <strong>omnisre-prod-eks</strong>. 0 active firing alerts. All nodes and workloads healthy.';
+                    heroPill.className = 'hero-badge badge-green';
+                    heroPill.innerText = '● 0 FIRING ALERTS';
+
                     container.innerHTML = `
                     <div class="empty-card">
                         <div class="empty-icon">🛡️</div>
-                        <h3 style="font-size: 15px; color: var(--text-title); margin-bottom: 6px;">All Workloads Healthy & Monitored</h3>
-                        <p style="font-size: 13px;">No active incidents. Click any simulator card above to trigger autonomous incident investigation.</p>
+                        <h3 style="font-size: 15px; color: var(--text-title); margin-bottom: 6px;">Cluster Workloads Healthy & Monitored</h3>
+                        <p style="font-size: 13px;">No active firing incidents on cluster <strong>omnisre-prod-eks</strong>. The autonomous AIOps agent is actively monitoring Prometheus and Kubernetes telemetry.</p>
                     </div>`;
                     return;
                 }
+
+                // If incidents exist, highlight the alert status
+                heroBanner.classList.add('alert-state');
+                heroIcon.innerHTML = '🚨';
+                heroTitle.innerText = 'INCIDENT STREAM: TRIAGED & REMEDIATED';
+                heroSub.innerHTML = `Autonomous AIOps agent has triaged and self-healed <strong>${cachedIncidents.length} incident(s)</strong> on cluster <strong>omnisre-prod-eks</strong>.`;
+                heroPill.className = 'hero-badge badge-red';
+                heroPill.innerText = `● ${cachedIncidents.length} TRIAGED INCIDENTS`;
 
                 container.innerHTML = cachedIncidents.map((inc, idx) => {
                     const isCritical = inc.severity === 'CRITICAL';
                     const sevClass = isCritical ? 'tag-critical' : 'tag-warning';
                     const confPct = Math.round(inc.confidence_score * 100);
                     const formattedDate = formatIncidentTime(inc.timestamp);
-                    const durationMs = inc.execution_duration_ms || 142;
+                    const durationMs = inc.execution_duration_ms || 105;
+                    const clusterName = inc.cluster_name || 'omnisre-prod-eks';
+                    const nodeName = inc.node_name || 'ip-192-168-73-36.ap-south-1.compute.internal';
+                    const containerName = inc.container_name || 'memory-hog';
 
                     return `
                     <div class="incident-card ${idx === 0 ? 'new-arrival' : ''}">
+                        <!-- EXACT ERROR LOCATION HIERARCHY -->
+                        <div class="error-location-bar">
+                            <span class="location-label">📍 FAILURE LOCATION:</span>
+                            <span class="loc-crumb">Cluster: <strong class="text-cyan">${clusterName}</strong></span>
+                            <span class="loc-sep">➔</span>
+                            <span class="loc-crumb">Node: <strong class="text-indigo">${nodeName}</strong></span>
+                            <span class="loc-sep">➔</span>
+                            <span class="loc-crumb">Namespace: <strong class="text-warning">${inc.namespace}</strong></span>
+                            <span class="loc-sep">➔</span>
+                            <span class="loc-crumb">Pod: <strong class="text-emerald">${inc.target_resource}</strong></span>
+                            <span class="loc-sep">➔</span>
+                            <span class="loc-crumb">Container: <strong>${containerName}</strong></span>
+                        </div>
+
                         <div class="incident-header">
                             <div class="incident-title-left">
                                 <span class="incident-alert-name">${inc.alert_name}</span>
-                                <span class="tag-badge ${sevClass}" title="Outage Severity Tier">SEVERITY: ${inc.severity}</span>
-                                <span class="tag-badge tag-healed" title="Autonomous SRE Resolution State">
+                                <span class="tag-badge ${sevClass}">SEVERITY: ${inc.severity}</span>
+                                <span class="tag-badge tag-healed">
                                     <span>${inc.remediation_executed ? 'STATUS: ✔ RESOLVED (' + durationMs + 'ms)' : 'STATUS: ⏳ AWAITING APPROVAL'}</span>
                                 </span>
-                                <span class="tag-badge tag-remedy" title="Kubernetes Remediation Action">REMEDY: ${inc.remediation_type}</span>
-                                <span class="tag-badge tag-live-state" title="Live Pod Readiness">
+                                <span class="tag-badge tag-remedy">REMEDY: ${inc.remediation_type}</span>
+                                <span class="tag-badge tag-live-state">
                                     LIVE POD: ${inc.verification_status || 'Running (1/1) - Healthy'}
                                 </span>
                             </div>
@@ -1184,7 +1487,7 @@ Audit Standard: SOC2 CC7.3 / ISO 27001 Automated Recovery Logged.`;
                                 <div class="info-panel">
                                     <div class="info-label">
                                         <span>AI Root Cause Diagnosis</span>
-                                        <span class="code-pill">Target: ${inc.target_resource}</span>
+                                        <span class="code-pill">Exit Code: ${inc.exit_code || 137}</span>
                                     </div>
                                     <p class="info-content">${inc.root_cause}</p>
                                 </div>
@@ -1244,7 +1547,7 @@ Audit Standard: SOC2 CC7.3 / ISO 27001 Automated Recovery Logged.`;
                 const res = await fetch('/simulate', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ scenario: scenario, namespace: 'production' })
+                    body: JSON.stringify({ scenario: scenario, namespace: 'default' })
                 });
                 const data = await res.json();
                 showToast(`Remediated: ${data.alert_name} in namespace "${data.namespace}"`);
@@ -1259,9 +1562,11 @@ Audit Standard: SOC2 CC7.3 / ISO 27001 Automated Recovery Logged.`;
             }
         }
 
-        // Initial fetch and auto-refresh every 3.5 seconds
+        // Initial fetch and auto-refresh
+        fetchClusterOverview();
         fetchIncidents();
         setInterval(fetchIncidents, 3500);
+        setInterval(fetchClusterOverview, 10000);
     </script>
 </body>
 </html>

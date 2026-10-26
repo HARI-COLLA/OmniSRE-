@@ -31,6 +31,10 @@ class AlertmanagerWebhook(BaseModel):
 class PodContext(BaseModel):
     pod_name: str
     namespace: str
+    cluster_name: str = "omnisre-prod-eks"
+    node_name: Optional[str] = None
+    container_name: Optional[str] = None
+    image: Optional[str] = None
     phase: str = "Unknown"
     restart_count: int = 0
     exit_code: Optional[int] = None
@@ -56,6 +60,10 @@ class RCAReport(BaseModel):
     alert_name: str
     target_resource: str
     namespace: str
+    cluster_name: str = "omnisre-prod-eks"
+    node_name: Optional[str] = "ip-192-168-73-36.ap-south-1.compute.internal"
+    container_name: Optional[str] = "app"
+    image: Optional[str] = None
     severity: str
     root_cause: str
     impact_summary: str

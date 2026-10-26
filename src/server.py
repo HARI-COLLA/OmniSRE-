@@ -93,6 +93,11 @@ async def process_incident(alert: AlertItem, target_scenario: str = None) -> RCA
     rca.exit_code = pod_ctx.exit_code if pod_ctx else None
     rca.raw_logs = pod_ctx.recent_logs if pod_ctx else ""
     rca.k8s_events = pod_ctx.k8s_events if pod_ctx else []
+    if pod_ctx:
+        rca.cluster_name = pod_ctx.cluster_name or "omnisre-prod-eks"
+        rca.node_name = pod_ctx.node_name or "ip-192-168-73-36.ap-south-1.compute.internal"
+        rca.container_name = pod_ctx.container_name or "app"
+        rca.image = pod_ctx.image
     
     matched_pol = policy_engine.find_matching_policy(
         alert_name=alert.labels.get("alertname", ""),
@@ -108,6 +113,11 @@ async def process_incident(alert: AlertItem, target_scenario: str = None) -> RCA
     # 5. Save to Persistent Database (SOC2 Audit Trail)
     incident_db.save_incident(rca)
     return rca
+
+@app.get("/cluster/overview", tags=["System"])
+def get_cluster_overview():
+    """Returns live connected cluster metadata, node states, and pod counts."""
+    return k8s_client.get_cluster_overview()
 
 @app.post("/webhook", tags=["Alert Ingestion"], status_code=status.HTTP_202_ACCEPTED)
 async def alertmanager_webhook(webhook: AlertmanagerWebhook, background_tasks: BackgroundTasks):

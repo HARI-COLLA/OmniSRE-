@@ -128,15 +128,28 @@ class AIEngine:
 
         # Case 1: OOMKilled / Heap Exhaustion
         if exit_code == 137 or "OOMKilled" in exit_reason or "heap out of memory" in logs or "OOMKilled" in events:
+            image_name = (pod_ctx.image or "") if pod_ctx else ""
+            target_res = (context.alert.labels.get("pod") or "") if context.alert.labels else ""
+            
+            runtime_name = "container process"
+            if "python" in logs.lower() or "python" in image_name.lower():
+                runtime_name = "Python application runtime"
+            elif "node" in logs.lower() or "javascript" in logs.lower() or "v8" in logs.lower():
+                runtime_name = "Node.js V8 runtime"
+            elif "jvm" in logs.lower() or "java" in logs.lower():
+                runtime_name = "Java JVM"
+            elif "go" in logs.lower() or "golang" in logs.lower():
+                runtime_name = "Go binary"
+
             return {
                 "severity": "CRITICAL",
                 "root_cause": (
-                    "Pod was killed with SIGKILL (Exit Code 137) due to Out-Of-Memory (OOMKilled). "
-                    "The Node.js V8 runtime or container exceeded the memory cgroup limit under load."
+                    f"Process terminated with Linux kernel SIGKILL (Exit Code 137) triggered by cgroup OOM Killer. "
+                    f"The {runtime_name} exceeded configured container memory limits under load."
                 ),
-                "impact_summary": "Service pod terminated unexpectedly, causing HTTP 502/503 dropped connections for active client requests.",
+                "impact_summary": "Service replica terminated abruptly, causing active HTTP connections to drop.",
                 "confidence_score": 0.98,
-                "recommended_action": "Execute auto-restart to clear memory leak and schedule memory limit increase in deployment manifest.",
+                "recommended_action": "Evict failing container, trigger immediate pod restart with clean memory, and scale memory limits in deployment spec.",
                 "remediation_type": "RESTART_POD"
             }
 
