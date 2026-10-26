@@ -3,7 +3,7 @@ replicaCount: 1
 image:
   repository: 251128026767.dkr.ecr.ap-south-1.amazonaws.com/omnisre
   pullPolicy: IfNotPresent
-  tag: "1.0.9"
+  tag: "1.0.10"
 
 service:
   type: ClusterIP

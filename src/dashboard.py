@@ -563,6 +563,11 @@ DASHBOARD_HTML = """<!DOCTYPE html>
             box-shadow: 0 10px 30px rgba(0, 0, 0, 0.4);
         }
 
+        .card-unresolved {
+            border-color: rgba(244, 63, 94, 0.6) !important;
+            box-shadow: 0 0 25px rgba(244, 63, 94, 0.25) !important;
+        }
+
         .incident-header {
             display: flex;
             justify-content: space-between;
@@ -1488,6 +1493,13 @@ Audit Standard: SOC2 CC7.3 / ISO 27001 Automated Recovery Logged.`;
                     return (inc.cluster_name || '') === currentFilter;
                 });
 
+                // Pin unresolved incidents to the top of the stream so they are immediately visible
+                displayed.sort((a, b) => {
+                    if (!a.remediation_executed && b.remediation_executed) return -1;
+                    if (a.remediation_executed && !b.remediation_executed) return 1;
+                    return new Date(b.timestamp) - new Date(a.timestamp);
+                });
+
                 document.getElementById('incident-counter-badge').innerText = `${displayed.length} Incident(s)`;
                 const container = document.getElementById('incidents-container');
                 const heroBanner = document.getElementById('hero-banner');
@@ -1520,7 +1532,8 @@ Audit Standard: SOC2 CC7.3 / ISO 27001 Automated Recovery Logged.`;
                     heroBanner.classList.add('alert-state');
                     heroIcon.innerHTML = '🚨';
                     heroTitle.innerText = `CRITICAL ALERT: ${activeUnresolved.length} UNRESOLVED INCIDENT(S)`;
-                    heroSub.innerHTML = `Active incident detected on cluster <strong>${currentFilter}</strong>. Automated triage and remediation in progress.`;
+                    const unresolvedNames = activeUnresolved.map(u => `<strong>${u.target_resource}</strong> (${u.alert_name})`).join(', ');
+                    heroSub.innerHTML = `Active failure on: ${unresolvedNames} in cluster <strong>${currentFilter}</strong>. Review triage and execute remediation below.`;
                     heroPill.className = 'hero-badge badge-red';
                     heroPill.innerText = `● ${activeUnresolved.length} ACTIVE INCIDENT(S)`;
                 } else {
@@ -1544,7 +1557,7 @@ Audit Standard: SOC2 CC7.3 / ISO 27001 Automated Recovery Logged.`;
                     const containerName = inc.container_name || 'memory-hog';
 
                     return `
-                    <div class="incident-card ${idx === 0 ? 'new-arrival' : ''}">
+                    <div class="incident-card ${!inc.remediation_executed ? 'card-unresolved' : ''} ${idx === 0 ? 'new-arrival' : ''}">
                         <!-- EXACT ERROR LOCATION HIERARCHY -->
                         <div class="error-location-bar">
                             <span class="location-label">📍 FAILURE LOCATION:</span>
