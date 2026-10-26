@@ -1635,9 +1635,15 @@ Audit Standard: SOC2 CC7.3 / ISO 27001 Automated Recovery Logged.`;
                         </div>
 
                         <div class="incident-footer-bar">
-                            <button class="btn-inspect" onclick="openForensicModal(${idx})">
-                                🔍 Inspect Kubernetes Forensics & Terminal Logs
-                            </button>
+                            <div style="display: flex; gap: 10px; align-items: center; flex-wrap: wrap;">
+                                <button class="btn-inspect" onclick="openForensicModal(${idx})">
+                                    🔍 Inspect Kubernetes Forensics & Terminal Logs
+                                </button>
+                                ${!inc.remediation_executed ? `
+                                <button class="btn-inspect" onclick="triggerIncidentRemediate('${inc.incident_id}', this)" style="background: linear-gradient(135deg, #10B981, #059669); color: white; border: none; font-weight: 700; cursor: pointer; box-shadow: 0 4px 15px rgba(16, 185, 129, 0.4);">
+                                    ⚡ Execute Autonomous Self-Healing Now
+                                </button>` : ''}
+                            </div>
                             <span class="proof-tag">✔ SOC2 Automated Audit Hash: sha256:${inc.incident_id.substring(0, 12)}</span>
                         </div>
                     </div>
@@ -1700,6 +1706,23 @@ Audit Standard: SOC2 CC7.3 / ISO 27001 Automated Recovery Logged.`;
             }
             showToast('🔄 Stream synchronized to live cluster');
             setTimeout(() => { if (btn) btn.classList.remove('rotating'); }, 600);
+        }
+
+        async function triggerIncidentRemediate(id, btn) {
+            if (btn) {
+                btn.innerText = '⚡ Healing Replica in Cluster...';
+                btn.style.opacity = '0.7';
+            }
+            showToast(`⚡ Executing autonomous self-healing for ${id.substring(0, 8)}...`);
+            try {
+                const res = await fetch(`/remediate/${id}`, { method: 'POST' });
+                const data = await res.json();
+                showToast(`✔ Issue Resolved: ${data.remediation_result}`);
+                await fetchIncidents();
+                await fetchClusterOverview();
+            } catch (e) {
+                showToast(`Remediation error: ${e}`);
+            }
         }
 
         // Initial fetch, real-time WebSocket, and auto-refresh fallback
