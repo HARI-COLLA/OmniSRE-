@@ -17,7 +17,7 @@ class RemediationEngine:
         # Pending approvals for Human-in-the-Loop: token -> RCAReport
         self.pending_approvals: Dict[str, RCAReport] = {}
 
-    def execute_remediation(self, rca: RCAReport, exit_code: Optional[int] = None) -> Tuple[bool, str]:
+    def execute_remediation(self, rca: RCAReport, exit_code: Optional[int] = None, bypass_approval: bool = False) -> Tuple[bool, str]:
         """
         Executes self-healing actions governed by declarative YAML policies and safety guardrails.
         """
@@ -53,9 +53,10 @@ class RemediationEngine:
             scale_max = policy.max_replicas
 
         # 2. Human-in-the-Loop (HITL) Check
-        if require_approval:
+        if require_approval and not bypass_approval:
             token = f"approval-{rca.incident_id[:8]}"
             self.pending_approvals[token] = rca
+            rca.approval_token = token
             msg = f"Policy '{policy.name if policy else 'default'}' requires human approval. Approval token: {token} generated."
             logger.warning(msg)
             return False, msg
@@ -121,7 +122,15 @@ class RemediationEngine:
             return False, f"Invalid or expired approval token '{token}'."
         rca = self.pending_approvals.pop(token)
         logger.info(f"Human approval received for token '{token}' (Incident {rca.incident_id}). Executing now...")
-        # Temporarily bypass approval requirement since human approved it
-        return self.execute_remediation(rca)
+        # Bypass approval requirement since human approved it
+        return self.execute_remediation(rca, bypass_approval=True)
+
+    def deny_remediation(self, token: str, reason: str = "Rejected by human SRE operator") -> Tuple[bool, str]:
+        """Rejects and cancels a pending Human-in-the-Loop remediation."""
+        if token not in self.pending_approvals:
+            return False, f"Invalid or expired approval token '{token}'."
+        rca = self.pending_approvals.pop(token)
+        logger.info(f"Human operator rejected remediation for token '{token}' (Incident {rca.incident_id}): {reason}")
+        return True, f"Remediation rejected by operator: {reason}"
 
 remediation_engine = RemediationEngine()

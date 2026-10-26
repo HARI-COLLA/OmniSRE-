@@ -48,3 +48,7 @@ htmlcov/
 *.sqlite3
 data/*.db
 
+# IDE & local scratch
+.loopcode/
+scratch/
+

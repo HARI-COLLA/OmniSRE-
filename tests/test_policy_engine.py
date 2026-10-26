@@ -46,6 +46,31 @@ def test_human_in_the_loop_approval_flow():
     assert success is True
     assert "Triggered deployment rollout restart" in msg
 
+def test_human_in_the_loop_deny_flow():
+    rem_engine = RemediationEngine()
+    rca = RCAReport(
+        incident_id="test-deny-01",
+        timestamp="2026-10-25T12:00:00Z",
+        alert_name="PodCrashLooping",
+        target_resource="critical-service-pod",
+        namespace="production",
+        severity="CRITICAL",
+        root_cause="Faulty configuration",
+        impact_summary="Service degraded",
+        confidence_score=0.96,
+        recommended_action="Rollback deployment",
+        remediation_type=RemediationActionType.ROLLBACK_DEPLOYMENT
+    )
+
+    token = "approval-deny-test-01"
+    rem_engine.pending_approvals[token] = rca
+
+    # Deny via engine
+    success, msg = rem_engine.deny_remediation(token, reason="Blocked for manual audit")
+    assert success is True
+    assert "rejected by operator" in msg
+    assert token not in rem_engine.pending_approvals
+
 def test_list_policies_endpoint():
     response = client.get("/policies")
     assert response.status_code == 200

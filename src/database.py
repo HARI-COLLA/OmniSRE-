@@ -1,6 +1,7 @@
 import os
 import sqlite3
 import logging
+import hashlib
 from typing import List, Optional
 from datetime import datetime, timezone
 from .models import RCAReport, RemediationActionType
@@ -44,7 +45,9 @@ class IncidentDatabase:
                         policy_matched TEXT,
                         execution_duration_ms INTEGER,
                         verification_status TEXT,
-                        raw_logs TEXT
+                        raw_logs TEXT,
+                        approval_token TEXT,
+                        audit_hash TEXT
                     )
                 """)
                 cursor.execute("CREATE INDEX IF NOT EXISTS idx_incidents_timestamp ON incidents(timestamp DESC)")
@@ -56,7 +59,9 @@ class IncidentDatabase:
                     ("policy_matched", "TEXT"),
                     ("execution_duration_ms", "INTEGER"),
                     ("verification_status", "TEXT"),
-                    ("raw_logs", "TEXT")
+                    ("raw_logs", "TEXT"),
+                    ("approval_token", "TEXT"),
+                    ("audit_hash", "TEXT")
                 ]:
                     try:
                         cursor.execute(f"ALTER TABLE incidents ADD COLUMN {col_name} {col_type}")
@@ -70,7 +75,11 @@ class IncidentDatabase:
             conn.close()
 
     def save_incident(self, rca: RCAReport):
-        """Persists an incident post-mortem report to the database."""
+        """Persists an incident post-mortem report to the database with cryptographic SHA-256 hashing."""
+        if not rca.audit_hash:
+            raw_hash_data = f"{rca.incident_id}:{rca.timestamp}:{rca.alert_name}:{rca.target_resource}:{rca.root_cause}:{rca.remediation_type}"
+            rca.audit_hash = hashlib.sha256(raw_hash_data.encode("utf-8")).hexdigest()
+
         conn = self._get_connection()
         try:
             with conn:
@@ -81,8 +90,9 @@ class IncidentDatabase:
                         severity, root_cause, impact_summary, confidence_score,
                         recommended_action, remediation_type, remediation_executed,
                         remediation_result, created_at, exit_code, policy_matched,
-                        execution_duration_ms, verification_status, raw_logs
-                    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                        execution_duration_ms, verification_status, raw_logs,
+                        approval_token, audit_hash
+                    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
                 """, (
                     rca.incident_id,
                     rca.timestamp,
@@ -97,14 +107,16 @@ class IncidentDatabase:
                     rca.remediation_type.value if hasattr(rca.remediation_type, 'value') else str(rca.remediation_type),
                     1 if rca.remediation_executed else 0,
                     rca.remediation_result,
-                    datetime.now().astimezone().isoformat(),
+                    datetime.now(timezone.utc).isoformat().replace("+00:00", "Z"),
                     rca.exit_code,
                     rca.policy_matched,
                     rca.execution_duration_ms,
                     rca.verification_status,
-                    rca.raw_logs
+                    rca.raw_logs,
+                    rca.approval_token,
+                    rca.audit_hash
                 ))
-                logger.info(f"Persisted incident '{rca.incident_id}' to audit storage.")
+                logger.info(f"Persisted incident '{rca.incident_id}' (Audit Hash: {rca.audit_hash[:12]}...) to audit storage.")
         except Exception as e:
             logger.error(f"Failed to persist incident {rca.incident_id}: {e}")
         finally:
@@ -138,8 +150,10 @@ class IncidentDatabase:
                     exit_code=row["exit_code"] if "exit_code" in keys else None,
                     policy_matched=row["policy_matched"] if "policy_matched" in keys else None,
                     execution_duration_ms=row["execution_duration_ms"] if "execution_duration_ms" in keys else None,
-                    verification_status=row["verification_status"] if "verification_status" in keys else "Healthy (Running 1/1)",
-                    raw_logs=row["raw_logs"] if "raw_logs" in keys else ""
+                    verification_status=row["verification_status"] if "verification_status" in keys else None,
+                    raw_logs=row["raw_logs"] if "raw_logs" in keys else "",
+                    approval_token=row["approval_token"] if "approval_token" in keys else None,
+                    audit_hash=row["audit_hash"] if "audit_hash" in keys else None
                 ))
         except Exception as e:
             logger.error(f"Failed to query incidents from database: {e}")

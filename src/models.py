@@ -49,7 +49,7 @@ class TelemetryContext(BaseModel):
 
 class IncidentContext(BaseModel):
     incident_id: str = Field(default_factory=lambda: str(uuid.uuid4()))
-    timestamp: str = Field(default_factory=lambda: datetime.now().astimezone().isoformat())
+    timestamp: str = Field(default_factory=lambda: datetime.now(timezone.utc).isoformat().replace("+00:00", "Z"))
     alert: AlertItem
     pod_context: Optional[PodContext] = None
     telemetry: Optional[TelemetryContext] = None
@@ -61,8 +61,8 @@ class RCAReport(BaseModel):
     target_resource: str
     namespace: str
     cluster_name: str = "omnisre-prod-eks"
-    node_name: Optional[str] = "ip-192-168-73-36.ap-south-1.compute.internal"
-    container_name: Optional[str] = "app"
+    node_name: Optional[str] = None
+    container_name: Optional[str] = None
     image: Optional[str] = None
     severity: str
     root_cause: str
@@ -75,9 +75,11 @@ class RCAReport(BaseModel):
     exit_code: Optional[int] = None
     policy_matched: Optional[str] = None
     execution_duration_ms: Optional[int] = None
-    verification_status: Optional[str] = "Healthy (Running 1/1)"
+    verification_status: Optional[str] = None
     raw_logs: Optional[str] = ""
     k8s_events: List[str] = Field(default_factory=list)
+    approval_token: Optional[str] = None
+    audit_hash: Optional[str] = None
 
 
 class SimulationRequest(BaseModel):

@@ -9,7 +9,7 @@
 [![Helm](https://img.shields.io/badge/Helm-v3%20Ready-0F1689.svg?style=for-the-badge&logo=helm&logoColor=white)](https://helm.sh/)
 [![Prometheus](https://img.shields.io/badge/Prometheus-Alertmanager-E6522C.svg?style=for-the-badge&logo=prometheus&logoColor=white)](https://prometheus.io/)
 [![Docker](https://img.shields.io/badge/Docker-Multi--Arch-2496ED.svg?style=for-the-badge&logo=docker&logoColor=white)](https://www.docker.com/)
-[![Tests](https://img.shields.io/badge/Pytest-21%2F21%20Passed%20(100%25)-brightgreen.svg?style=for-the-badge&logo=pytest&logoColor=white)]()
+[![Tests](https://img.shields.io/badge/Pytest-22%2F22%20Passed%20(100%25)-brightgreen.svg?style=for-the-badge&logo=pytest&logoColor=white)]()
 [![License](https://img.shields.io/badge/License-Apache--2.0-blue.svg?style=for-the-badge)](LICENSE)
 
 <br/>

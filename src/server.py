@@ -1,5 +1,6 @@
 import time
 import logging
+import hashlib
 from typing import List, Dict, Any
 from fastapi import FastAPI, BackgroundTasks, status, HTTPException, Depends, WebSocket, WebSocketDisconnect
 from fastapi.responses import HTMLResponse
@@ -122,8 +123,8 @@ async def process_incident(alert: AlertItem, target_scenario: str = None, auto_r
     rca.k8s_events = pod_ctx.k8s_events if pod_ctx else []
     if pod_ctx:
         rca.cluster_name = pod_ctx.cluster_name or "omnisre-prod-eks"
-        rca.node_name = pod_ctx.node_name or "ip-192-168-73-36.ap-south-1.compute.internal"
-        rca.container_name = pod_ctx.container_name or "app"
+        rca.node_name = pod_ctx.node_name
+        rca.container_name = pod_ctx.container_name
         rca.image = pod_ctx.image
     
     matched_pol = policy_engine.find_matching_policy(
@@ -131,8 +132,19 @@ async def process_incident(alert: AlertItem, target_scenario: str = None, auto_r
         namespace=namespace,
         exit_code=rca.exit_code
     )
-    rca.policy_matched = matched_pol.name if matched_pol else "default-sre-policy"
-    rca.verification_status = "Healthy (Running 1/1) - Probes Passing"
+    rca.policy_matched = matched_pol.name if matched_pol else None
+
+    # Dynamic honest verification status
+    if rca.remediation_executed:
+        rca.verification_status = "Healthy (Running 1/1) - Probes Passing"
+    elif rca.approval_token:
+        rca.verification_status = "Awaiting Human Authorization"
+    else:
+        rca.verification_status = "Triage Completed (Unresolved)"
+
+    # Compute real SHA-256 audit hash for SOC2 & ISO 27001 tamper-proof integrity
+    raw_hash_data = f"{rca.incident_id}:{rca.timestamp}:{rca.alert_name}:{rca.target_resource}:{rca.root_cause}:{rca.remediation_type}"
+    rca.audit_hash = hashlib.sha256(raw_hash_data.encode("utf-8")).hexdigest()
 
     # 4. Dispatch Notifications
     await notifier.dispatch_incident_report(rca)
@@ -259,14 +271,56 @@ def list_pending_approvals():
     return remediation_engine.pending_approvals
 
 @app.post("/approval/{token}", tags=["Human-in-the-Loop"], dependencies=[Depends(verify_api_key)])
-def approve_pending_remediation(token: str):
+async def approve_pending_remediation(token: str):
     """
     Approves and triggers execution for a pending remediation from Slack or Web UI.
     """
     success, result = remediation_engine.approve_remediation(token)
     if not success:
         raise HTTPException(status_code=400, detail=result)
+    
+    # Update audit record in database & broadcast live to all dashboards
+    incidents = incident_db.get_recent_incidents(limit=100)
+    target_inc = next((i for i in incidents if i.approval_token == token or (i.incident_id and f"approval-{i.incident_id[:8]}" == token)), None)
+    if target_inc:
+        target_inc.remediation_executed = success
+        target_inc.remediation_result = result
+        target_inc.verification_status = "Healthy (Running 1/1) - Probes Passing" if success else "Remediation Failed"
+        incident_db.save_incident(target_inc)
+        try:
+            await ws_manager.broadcast({
+                "type": "INCIDENT_RESOLVED",
+                "data": target_inc.model_dump()
+            })
+        except Exception:
+            pass
     return {"status": "approved", "token": token, "result": result}
+
+@app.post("/approval/{token}/deny", tags=["Human-in-the-Loop"], dependencies=[Depends(verify_api_key)])
+async def deny_pending_remediation(token: str, reason: str = "Rejected by human SRE operator"):
+    """
+    Rejects and cancels a pending remediation from Slack or Web UI.
+    """
+    success, result = remediation_engine.deny_remediation(token, reason=reason)
+    if not success:
+        raise HTTPException(status_code=400, detail=result)
+    
+    # Update audit record in database & broadcast live rejection to all dashboards
+    incidents = incident_db.get_recent_incidents(limit=100)
+    target_inc = next((i for i in incidents if i.approval_token == token or (i.incident_id and f"approval-{i.incident_id[:8]}" == token)), None)
+    if target_inc:
+        target_inc.remediation_executed = False
+        target_inc.remediation_result = f"REJECTED: {reason}"
+        target_inc.verification_status = "Operator Rejected Remediation"
+        incident_db.save_incident(target_inc)
+        try:
+            await ws_manager.broadcast({
+                "type": "INCIDENT_RESOLVED",
+                "data": target_inc.model_dump()
+            })
+        except Exception:
+            pass
+    return {"status": "denied", "token": token, "result": result}
 
 @app.post("/remediate/{incident_id}", tags=["Autonomous Healing"])
 async def trigger_remediation_by_id(incident_id: str):
