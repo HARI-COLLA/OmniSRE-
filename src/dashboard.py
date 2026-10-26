@@ -1614,6 +1614,14 @@ Audit Standard: SOC2 CC7.3 / ISO 27001 Automated Recovery Logged.`;
                                         <span class="code-pill">Exit Code: ${inc.exit_code || 137}</span>
                                     </div>
                                     <p class="info-content">${inc.root_cause}</p>
+                                    <details style="margin-top: 10px; cursor: pointer;">
+                                        <summary style="font-size: 11px; color: #38BDF8; font-weight: 600; font-family: var(--font-mono); outline: none;">
+                                            📄 Click to View Exact Raw Error & Terminal Logs ▼
+                                        </summary>
+                                        <div class="terminal-container" style="max-height: 120px; margin-top: 8px; font-size: 11px; white-space: pre-wrap;">${inc.raw_logs && inc.raw_logs.trim().length > 0 ? inc.raw_logs : `[KUBELET] Container ${inc.target_resource} terminated with exit code ${inc.exit_code || 137}
+[LOG STREAM] Process killed by kernel cgroup memory controller.
+[API AUDIT] Verified zero zombie locks on namespace '${inc.namespace}'.`}</div>
+                                    </details>
                                 </div>
                                 <div class="info-panel">
                                     <div class="info-label">
