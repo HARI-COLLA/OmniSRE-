@@ -13,10 +13,10 @@ metadata:
   name: {{ include "omnisre.fullname" . | default "omnisre" }}-role
 rules:
   - apiGroups: [""]
-    resources: ["pods", "pods/log", "events", "services"]
+    resources: ["pods", "pods/log", "events", "services", "nodes", "namespaces", "configmaps"]
     verbs: ["get", "list", "watch", "delete"]
   - apiGroups: ["apps"]
-    resources: ["deployments", "deployments/scale"]
+    resources: ["deployments", "deployments/scale", "statefulsets", "daemonsets"]
     verbs: ["get", "list", "watch", "patch", "update"]
 ---
 apiVersion: rbac.authorization.k8s.io/v1

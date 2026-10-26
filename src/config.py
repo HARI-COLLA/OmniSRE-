@@ -20,6 +20,7 @@ class Settings(BaseModel):
     # Kubernetes Configuration
     k8s_in_cluster: bool = os.getenv("K8S_IN_CLUSTER", "false").lower() == "true"
     k8s_mock_mode: bool = os.getenv("K8S_MOCK_MODE", "true").lower() == "true"
+    cluster_name: str = os.getenv("CLUSTER_NAME", "auto-detect")
 
     # Prometheus Configuration
     prometheus_url: str = os.getenv("PROMETHEUS_URL", "http://prometheus-kube-prometheus-prometheus.monitoring.svc:9090")

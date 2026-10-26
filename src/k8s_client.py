@@ -268,7 +268,44 @@ class KubernetesClient:
         try:
             nodes_data = self.v1.list_node()
             node_list = []
+            discovered_cluster = None
+            discovered_provider = "Kubernetes Cluster"
+            discovered_region = "Global"
+            discovered_version = "v1.31"
+
             for n in nodes_data.items:
+                labels = n.metadata.labels or {}
+                # Auto-discover cluster name from standard cloud provider labels
+                if not discovered_cluster:
+                    if "alpha.eksctl.io/cluster-name" in labels:
+                        discovered_cluster = labels["alpha.eksctl.io/cluster-name"]
+                        discovered_provider = "AWS EKS"
+                    elif "cloud.google.com/gke-cluster" in labels:
+                        discovered_cluster = labels["cloud.google.com/gke-cluster"]
+                        discovered_provider = "GCP GKE"
+                    elif "kubernetes.azure.com/cluster" in labels:
+                        discovered_cluster = labels["kubernetes.azure.com/cluster"]
+                        discovered_provider = "Azure AKS"
+
+                # Auto-discover region & provider from node providerID / labels
+                if "topology.kubernetes.io/region" in labels:
+                    discovered_region = labels["topology.kubernetes.io/region"]
+                elif "failure-domain.beta.kubernetes.io/region" in labels:
+                    discovered_region = labels["failure-domain.beta.kubernetes.io/region"]
+
+                provider_id = n.spec.provider_id or ""
+                if provider_id.startswith("aws://"):
+                    discovered_provider = "AWS EKS"
+                elif provider_id.startswith("gce://"):
+                    discovered_provider = "GCP GKE"
+                elif provider_id.startswith("azure://"):
+                    discovered_provider = "Azure AKS"
+                elif "kind" in provider_id or "minikube" in provider_id:
+                    discovered_provider = "Local KinD/Minikube"
+
+                if n.status and n.status.node_info and n.status.node_info.kubelet_version:
+                    discovered_version = n.status.node_info.kubelet_version
+
                 status_str = "NotReady"
                 if n.status and n.status.conditions:
                     for c in n.status.conditions:
@@ -281,7 +318,7 @@ class KubernetesClient:
                         if addr.type == "InternalIP":
                             internal_ip = addr.address
                             break
-                instance_type = n.metadata.labels.get("node.kubernetes.io/instance-type", "t3.small") if n.metadata and n.metadata.labels else "t3.small"
+                instance_type = labels.get("node.kubernetes.io/instance-type", "standard")
                 runtime = n.status.node_info.container_runtime_version if (n.status and n.status.node_info) else "containerd"
                 node_list.append({
                     "name": n.metadata.name,
@@ -291,6 +328,20 @@ class KubernetesClient:
                     "role": "worker",
                     "runtime": runtime
                 })
+
+            # Check override from settings
+            if settings.cluster_name and settings.cluster_name != "auto-detect":
+                final_cluster_name = settings.cluster_name
+            else:
+                final_cluster_name = discovered_cluster or "omnisre-prod-eks"
+
+            # Auto-discover namespaces
+            discovered_namespaces = []
+            try:
+                ns_items = self.v1.list_namespace().items
+                discovered_namespaces = [ns.metadata.name for ns in ns_items]
+            except Exception:
+                discovered_namespaces = ["default", "monitoring", "kube-system"]
 
             all_pods = self.v1.list_pod_for_all_namespaces()
             total_pods = len(all_pods.items)
@@ -307,16 +358,16 @@ class KubernetesClient:
 
             ready_count = sum(1 for n in node_list if n["status"] == "Ready")
             return {
-                "cluster_name": "omnisre-prod-eks",
-                "cloud_provider": "AWS EKS",
-                "region": "ap-south-1",
-                "k8s_version": "v1.31.14-eks",
+                "cluster_name": final_cluster_name,
+                "cloud_provider": discovered_provider,
+                "region": discovered_region,
+                "k8s_version": discovered_version,
                 "status": "DEGRADED" if failing_pods > 0 else "HEALTHY",
                 "control_plane": "ACTIVE (Endpoint: 6443)",
                 "total_nodes": len(node_list),
                 "ready_nodes": ready_count,
                 "nodes": node_list,
-                "namespaces": ["default", "monitoring", "kube-system"],
+                "namespaces": discovered_namespaces,
                 "total_pods": total_pods,
                 "healthy_pods": max(0, total_pods - failing_pods),
                 "failing_pods": failing_pods,
